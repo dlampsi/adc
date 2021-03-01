@@ -148,6 +148,7 @@ func (g *Group) MembersId() []string {
 	return result
 }
 
+// Adds provided accounts IDs to provided group members. Returns number of addedd accounts.
 func (cl *Client) AddGroupMembers(groupId string, membersIds ...string) (int, error) {
 	group, err := cl.GetGroup(&GetGroupequest{Id: groupId})
 	if err != nil {
@@ -158,26 +159,40 @@ func (cl *Client) AddGroupMembers(groupId string, membersIds ...string) (int, er
 	}
 
 	ch := make(chan string, len(membersIds))
+	errCh := make(chan error, len(membersIds))
 	wg := &sync.WaitGroup{}
+
 	for _, id := range membersIds {
 		wg.Add(1)
-		go func(userId string, ch chan<- string, wg *sync.WaitGroup) {
+		go func(userId string, ch chan<- string, errCh chan<- error, wg *sync.WaitGroup) {
 			defer wg.Done()
 			user, err := cl.GetUser(&GetUserRequest{Id: userId})
 			if err != nil {
+				errCh <- fmt.Errorf("can't get account '%s': %s", userId, err.Error())
 				return
 			}
 			if user == nil {
+				cl.logger.Debugf("Account '%s' being added to '%s' wasn't found",
+					userId, groupId)
 				return
 			}
 			if user.IsGroupMember(groupId) {
+				cl.logger.Debugf("The adding account '%s' is already a member of the group '%s'",
+					userId, groupId)
 				return
 			}
 			ch <- user.DN
-		}(id, ch, wg)
+		}(id, ch, errCh, wg)
 	}
 	wg.Wait()
+	close(errCh)
 	close(ch)
+
+	for err := range errCh {
+		if err != nil {
+			return 0, err
+		}
+	}
 
 	var toAdd []string
 	for dn := range ch {
@@ -188,6 +203,10 @@ func (cl *Client) AddGroupMembers(groupId string, membersIds ...string) (int, er
 	}
 
 	newMembers := popAddGroupMembers(group, toAdd)
+
+	cl.logger.Debugf("Adding new group members to '%s'; Old count: %d; New count: %d",
+		groupId, len(group.MembersId()), len(newMembers))
+
 	if err := cl.updateAttribute(group.DN, "member", newMembers); err != nil {
 		return 0, err
 	}
@@ -205,6 +224,7 @@ func popAddGroupMembers(g *Group, toAdd []string) []string {
 	return result
 }
 
+// Deletes provided accounts IDs from provided group members. Returns number of deleted from group members.
 func (cl *Client) DeleteGroupMembers(groupId string, membersIds ...string) (int, error) {
 	group, err := cl.GetGroup(&GetGroupequest{Id: groupId})
 	if err != nil {
@@ -215,26 +235,40 @@ func (cl *Client) DeleteGroupMembers(groupId string, membersIds ...string) (int,
 	}
 
 	ch := make(chan string, len(membersIds))
+	errCh := make(chan error, len(membersIds))
 	wg := &sync.WaitGroup{}
+
 	for _, id := range membersIds {
 		wg.Add(1)
-		go func(userId string, ch chan<- string, wg *sync.WaitGroup) {
+		go func(userId string, ch chan<- string, errCh chan<- error, wg *sync.WaitGroup) {
 			defer wg.Done()
 			user, err := cl.GetUser(&GetUserRequest{Id: userId})
 			if err != nil {
+				errCh <- fmt.Errorf("can't get account '%s': %s", userId, err.Error())
 				return
 			}
 			if user == nil {
+				cl.logger.Debugf("Account '%s' being deleted from '%s' wasn't found",
+					userId, groupId)
 				return
 			}
 			if !user.IsGroupMember(groupId) {
+				cl.logger.Debugf("The deleting account '%s' already isn't a member of the group '%s'",
+					userId, groupId)
 				return
 			}
 			ch <- user.DN
-		}(id, ch, wg)
+		}(id, ch, errCh, wg)
 	}
 	wg.Wait()
+	close(errCh)
 	close(ch)
+
+	for err := range errCh {
+		if err != nil {
+			return 0, err
+		}
+	}
 
 	var toDel []string
 	for dn := range ch {
@@ -245,6 +279,10 @@ func (cl *Client) DeleteGroupMembers(groupId string, membersIds ...string) (int,
 	}
 
 	newMembers := popDelGroupMembers(group, toDel)
+
+	cl.logger.Debugf("Deleting members from group '%s'; Old count: %d; New count: %d",
+		groupId, len(group.MembersId()), len(newMembers))
+
 	if err := cl.updateAttribute(group.DN, "member", newMembers); err != nil {
 		return 0, err
 	}

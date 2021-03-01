@@ -4,7 +4,6 @@ package adc
 import (
 	"crypto/tls"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -19,6 +18,7 @@ const (
 type Client struct {
 	cfg    *Config
 	ldapCl ldap.Client
+	logger Logger
 }
 
 // Creates new client and populate provided config and options.
@@ -29,6 +29,7 @@ func New(cfg *Config, opts ...Option) *Client {
 			Users:   DefaultUsersConfigs(),
 			Groups:  DefaultGroupsConfigs(),
 		},
+		logger: &nopLogger{},
 	}
 
 	// Apply options
@@ -42,11 +43,22 @@ func New(cfg *Config, opts ...Option) *Client {
 	return cl
 }
 
+// Client logger interface.
+type Logger interface {
+	Debug(args ...interface{})
+	Debugf(template string, args ...interface{})
+}
+
 type Option func(*Client)
 
 // Specifies ldap client for AD client.
 func WithLdapClient(l ldap.Client) Option {
 	return func(cl *Client) { cl.ldapCl = l }
+}
+
+// Specifies custom logger for client.
+func WithLogger(l Logger) Option {
+	return func(cl *Client) { cl.logger = l }
 }
 
 func (cl *Client) Config() *Config {
@@ -57,7 +69,7 @@ func (cl *Client) Config() *Config {
 func (cl *Client) Connect() error {
 	conn, err := cl.connect(cl.cfg.Bind)
 	if err != nil {
-		return fmt.Errorf("can't connect: %s", err.Error())
+		return err
 	}
 	cl.ldapCl = conn
 	return nil

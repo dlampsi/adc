@@ -9,6 +9,12 @@ import (
 	"github.com/go-ldap/ldap/v3"
 )
 
+// Dummy not operational logger.
+type nopLogger struct{}
+
+func (l *nopLogger) Debug(args ...interface{})                   {}
+func (l *nopLogger) Debugf(template string, args ...interface{}) {}
+
 // Mock client. Implements ldap client interface.
 type mockClient struct {
 }
