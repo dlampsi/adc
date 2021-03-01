@@ -3,6 +3,7 @@ package adc
 import (
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/go-ldap/ldap/v3"
 )
@@ -133,5 +134,63 @@ func (g *Group) MembersDn() []string {
 	for _, m := range g.Members {
 		result = append(result, m.DN)
 	}
+	return result
+}
+
+func (cl *Client) AddGroupMembers(groupId string, membersIds ...string) (int, error) {
+	group, err := cl.GetGroup(&GetGroupequest{Id: groupId})
+	if err != nil {
+		return 0, fmt.Errorf("can't get group: %s", err.Error())
+	}
+	if group == nil {
+		return 0, fmt.Errorf("group '%s' not found by ID", groupId)
+	}
+
+	ch := make(chan string, len(membersIds))
+	wg := &sync.WaitGroup{}
+	for _, id := range membersIds {
+		wg.Add(1)
+		go func(userId string, ch chan<- string, wg *sync.WaitGroup) {
+			defer wg.Done()
+			user, err := cl.GetUser(&GetUserRequest{Id: userId})
+			if err != nil {
+				return
+			}
+			if user == nil {
+				return
+			}
+			if user.IsGroupMember(groupId) {
+				return
+			}
+			fmt.Println("DEBUG: ", user.DN)
+			ch <- user.DN
+		}(id, ch, wg)
+	}
+	wg.Wait()
+	close(ch)
+
+	var toAdd []string
+	for dn := range ch {
+		toAdd = append(toAdd, dn)
+	}
+	if len(toAdd) == 0 {
+		return 0, nil
+	}
+
+	newMembers := popAddGroupMembers(group, toAdd)
+	if err := cl.updateAttribute(group.DN, "member", newMembers); err != nil {
+		return 0, err
+	}
+
+	return len(toAdd), nil
+}
+
+func popAddGroupMembers(g *Group, toAdd []string) []string {
+	if len(toAdd) == 0 {
+		return g.MembersDn()
+	}
+	result := make([]string, 0, len(g.Members)+len(toAdd))
+	result = append(result, g.MembersDn()...)
+	result = append(result, toAdd...)
 	return result
 }

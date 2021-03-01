@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/dlampsi/generigo"
 	"github.com/go-ldap/ldap/v3"
 )
 
@@ -51,7 +52,10 @@ func (cl *mockClient) Del(*ldap.DelRequest) error {
 	return nil
 }
 
-func (cl *mockClient) Modify(*ldap.ModifyRequest) error {
+func (cl *mockClient) Modify(req *ldap.ModifyRequest) error {
+	if req.DN == "OU=group2,DC=company,DC=com" {
+		return errors.New("error for tests")
+	}
 	return nil
 }
 
@@ -67,50 +71,85 @@ func (cl *mockClient) PasswordModify(*ldap.PasswordModifyRequest) (*ldap.Passwor
 	return nil, nil
 }
 
-const (
-	existsUserFilter         = "(&(objectClass=person)(sAMAccountName=user1))"
-	errorUserFilter          = "(&(objectClass=person)(sAMAccountName=user2))"
-	existsUserGroupsFilter   = "(&(objectClass=group)(member=OU=user1,DC=company,DC=com))"
-	existsGroupFilter        = "(&(objectClass=group)(sAMAccountName=group1))"
-	errorGroupFilter         = "(&(objectClass=group)(sAMAccountName=group2))"
-	existsGroupMembersFilter = "(&(objectCategory=person)(memberOf=OU=group1,DC=company,DC=com))"
-)
+type mockDataEntry struct {
+	entry   *ldap.Entry
+	filters []string
+}
 
-var (
-	existsUserEntry = &ldap.Entry{
-		DN: "OU=user1,DC=company,DC=com",
-		Attributes: []*ldap.EntryAttribute{
-			{Name: "sAMAccountName", Values: []string{"user1"}, ByteValues: [][]byte{}},
+var mockData = map[string]mockDataEntry{
+	"exists_user": {
+		entry: &ldap.Entry{
+			DN: "OU=user1,DC=company,DC=com",
+			Attributes: []*ldap.EntryAttribute{
+				{Name: "sAMAccountName", Values: []string{"user1"}, ByteValues: [][]byte{}},
+			},
 		},
-	}
-	existsGroupEntry = &ldap.Entry{
-		DN: "OU=group1,DC=company,DC=com",
-		Attributes: []*ldap.EntryAttribute{
-			{Name: "sAMAccountName", Values: []string{"group1"}, ByteValues: [][]byte{}},
+		filters: []string{
+			"(&(objectClass=person)(sAMAccountName=user1))",
+			"(&(objectClass=person)(distinguishedName=OU=user1,DC=company,DC=com))",
+			"(&(objectCategory=person)(memberOf=OU=group1,DC=company,DC=com))",
 		},
-	}
-)
+	},
+	"toadd_user": {
+		entry: &ldap.Entry{
+			DN: "OU=user3,DC=company,DC=com",
+			Attributes: []*ldap.EntryAttribute{
+				{Name: "sAMAccountName", Values: []string{"user3"}, ByteValues: [][]byte{}},
+			},
+		},
+		filters: []string{
+			"(&(objectClass=person)(sAMAccountName=user3))",
+			"(&(objectClass=person)(distinguishedName=OU=user3,DC=company,DC=com))",
+			"(&(objectCategory=person)(memberOf=OU=group3,DC=company,DC=com))",
+		},
+	},
+	"exists_group": {
+		entry: &ldap.Entry{
+			DN: "OU=group1,DC=company,DC=com",
+			Attributes: []*ldap.EntryAttribute{
+				{Name: "sAMAccountName", Values: []string{"group1"}, ByteValues: [][]byte{}},
+			},
+		},
+		filters: []string{
+			"(&(objectClass=group)(sAMAccountName=group1))",
+			"(&(objectClass=group)(distinguishedName=OU=group1,DC=company,DC=com))",
+			"(&(objectClass=group)(member=OU=user1,DC=company,DC=com))",
+		},
+	},
+	"for_errors": {
+		filters: []string{
+			"(&(objectClass=person)(sAMAccountName=user2))",
+			"(&(objectClass=person)(distinguishedName=OU=user2,DC=company,DC=com))",
+			"(&(objectClass=group)(sAMAccountName=group2))",
+			"(&(objectClass=group)(distinguishedName=OU=group2,DC=company,DC=com))",
+		},
+	},
+}
 
 func (cl *mockClient) Search(req *ldap.SearchRequest) (*ldap.SearchResult, error) {
-	if req.Filter == existsUserFilter || req.Filter == existsGroupMembersFilter {
+	if generigo.StringInSlice(req.Filter, mockData["exists_user"].filters) {
 		result := &ldap.SearchResult{}
-		result.Entries = append(result.Entries, existsUserEntry)
+		result.Entries = append(result.Entries, mockData["exists_user"].entry)
 		return result, nil
 	}
-	if req.Filter == errorUserFilter {
+
+	if generigo.StringInSlice(req.Filter, mockData["exists_group"].filters) {
+		result := &ldap.SearchResult{}
+		result.Entries = append(result.Entries, mockData["exists_group"].entry)
+		return result, nil
+	}
+
+	if generigo.StringInSlice(req.Filter, mockData["toadd_user"].filters) {
+		result := &ldap.SearchResult{}
+		result.Entries = append(result.Entries, mockData["toadd_user"].entry)
+		return result, nil
+	}
+
+	if generigo.StringInSlice(req.Filter, mockData["for_errors"].filters) {
 		return nil, errors.New("error for tests")
 	}
 
-	if req.Filter == existsGroupFilter || req.Filter == existsUserGroupsFilter {
-		result := &ldap.SearchResult{}
-		result.Entries = append(result.Entries, existsGroupEntry)
-		return result, nil
-	}
-	if req.Filter == errorGroupFilter {
-		return nil, errors.New("error for tests")
-	}
-
-	return nil, nil
+	return &ldap.SearchResult{Entries: nil}, nil
 }
 
 func (cl *mockClient) SearchWithPaging(searchRequest *ldap.SearchRequest, pagingSize uint32) (*ldap.SearchResult, error) {

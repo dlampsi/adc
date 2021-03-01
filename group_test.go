@@ -68,5 +68,29 @@ func Test_Client_GetGroup(t *testing.T) {
 	require.Equal(t, req.Id, group.Id)
 	require.NotNil(t, group.Members)
 	require.Len(t, group.Members, 1)
+}
 
+func Test_popAddGroupMembers(t *testing.T) {
+	group := &Group{
+		Members: []GroupMember{
+			{DN: "oldone"},
+		},
+	}
+
+	notChanged := popAddGroupMembers(group, nil)
+	require.Equal(t, group.MembersDn(), notChanged)
+
+	changed := popAddGroupMembers(group, []string{"newone"})
+	require.Equal(t, []string{"oldone", "newone"}, changed)
+}
+
+func Test_AddGroupMembers(t *testing.T) {
+	cl := New(&Config{}, WithLdapClient(&mockClient{}))
+
+	_, err := cl.AddGroupMembers("group2", "user1")
+	require.Error(t, err)
+
+	toAdd, err := cl.AddGroupMembers("group1", "user3")
+	require.NoError(t, err)
+	require.Equal(t, 1, toAdd)
 }
