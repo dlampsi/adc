@@ -1,0 +1,138 @@
+package adc
+
+import (
+	"errors"
+	"fmt"
+
+	"github.com/go-ldap/ldap/v3"
+)
+
+// Active Direcotry user.
+type User struct {
+	DN         string                 `json:"dn"`
+	Id         string                 `json:"id"`
+	Attributes map[string]interface{} `json:"attributes"`
+	Groups     []UserGroup            `json:"groups"`
+}
+
+// Active Direcotry user group info.
+type UserGroup struct {
+	DN string `json:"dn"`
+	Id string `json:"id"`
+}
+
+// Returns string attribute by attribute name.
+// Returns empty string if attribute not exists or it can't be covnerted to string.
+func (u *User) GetStringAttribute(name string) string {
+	for att, val := range u.Attributes {
+		if att == name {
+			if s, ok := val.(string); ok {
+				return s
+			}
+		}
+	}
+	return ""
+}
+
+type GetUserRequest struct {
+	// User ID to search.
+	Id string `json:"id"`
+	// Optional User DN. Overwrites ID if provided in request.
+	Dn string `json:"dn"`
+	// Optional user attributes to overwrite attributes in client config.
+	Attributes []string `json:"attributes"`
+	// Skip search of user groups data. Can improve request time.
+	SkipGroupsSearch bool `json:"skip_groups_search"`
+}
+
+func (req *GetUserRequest) Validate() error {
+	if req == nil {
+		return errors.New("nil request")
+	}
+	if req.Id == "" && req.Dn == "" {
+		return errors.New("neither of ID of DN provided")
+	}
+	return nil
+}
+
+func (cl *Client) GetUser(r *GetUserRequest) (*User, error) {
+	if err := r.Validate(); err != nil {
+		return nil, err
+	}
+
+	filter := fmt.Sprintf(cl.cfg.Users.FilterById, r.Id)
+	if r.Dn != "" {
+		filter = fmt.Sprintf(cl.cfg.Users.FilterByDn, ldap.EscapeFilter(r.Dn))
+	}
+
+	req := &ldap.SearchRequest{
+		BaseDN:       cl.cfg.Users.SearchBase,
+		Scope:        ldap.ScopeWholeSubtree,
+		DerefAliases: ldap.NeverDerefAliases,
+		TimeLimit:    int(cl.cfg.Timeout.Seconds()),
+		Filter:       filter,
+		Attributes:   cl.cfg.Users.Attributes,
+	}
+	if r.Attributes != nil {
+		req.Attributes = r.Attributes
+	}
+
+	entry, err := cl.searchEntry(req)
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return nil, nil
+	}
+
+	result := &User{
+		DN:         entry.DN,
+		Id:         entry.GetAttributeValue(cl.cfg.Users.IdAttribute),
+		Attributes: make(map[string]interface{}, len(entry.Attributes)),
+	}
+	for _, a := range entry.Attributes {
+		result.Attributes[a.Name] = entry.GetAttributeValue(a.Name)
+	}
+
+	if !r.SkipGroupsSearch {
+		groups, err := cl.getUserGroups(entry.DN)
+		if err != nil {
+			return nil, fmt.Errorf("can't get user groups: %s", err.Error())
+		}
+		result.Groups = groups
+	}
+
+	return result, nil
+}
+
+func (cl *Client) getUserGroups(dn string) ([]UserGroup, error) {
+	req := &ldap.SearchRequest{
+		BaseDN:       cl.cfg.Groups.SearchBase,
+		Scope:        ldap.ScopeWholeSubtree,
+		DerefAliases: ldap.NeverDerefAliases,
+		TimeLimit:    int(cl.cfg.Timeout.Seconds()),
+		Filter:       fmt.Sprintf(cl.cfg.Users.FilterGroupsByDn, ldap.EscapeFilter(dn)),
+		Attributes:   []string{cl.cfg.Groups.IdAttribute},
+	}
+	entries, err := cl.searchEntries(req)
+	if err != nil {
+		return nil, err
+	}
+	var result []UserGroup
+	for _, e := range entries {
+		result = append(result, UserGroup{
+			DN: e.DN,
+			Id: e.GetAttributeValue(cl.cfg.Groups.IdAttribute),
+		})
+	}
+	return result, nil
+}
+
+func (u *User) IsGroupMember(groupId string) bool {
+	for _, g := range u.Groups {
+		if g.Id == groupId {
+			return true
+		}
+	}
+	return false
+}
