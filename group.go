@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/dlampsi/generigo"
 	"github.com/go-ldap/ldap/v3"
 )
 
@@ -162,7 +163,6 @@ func (cl *Client) AddGroupMembers(groupId string, membersIds ...string) (int, er
 			if user.IsGroupMember(groupId) {
 				return
 			}
-			fmt.Println("DEBUG: ", user.DN)
 			ch <- user.DN
 		}(id, ch, wg)
 	}
@@ -192,5 +192,62 @@ func popAddGroupMembers(g *Group, toAdd []string) []string {
 	result := make([]string, 0, len(g.Members)+len(toAdd))
 	result = append(result, g.MembersDn()...)
 	result = append(result, toAdd...)
+	return result
+}
+
+func (cl *Client) DeleteGroupMembers(groupId string, membersIds ...string) (int, error) {
+	group, err := cl.GetGroup(&GetGroupequest{Id: groupId})
+	if err != nil {
+		return 0, fmt.Errorf("can't get group: %s", err.Error())
+	}
+	if group == nil {
+		return 0, fmt.Errorf("group '%s' not found by ID", groupId)
+	}
+
+	ch := make(chan string, len(membersIds))
+	wg := &sync.WaitGroup{}
+	for _, id := range membersIds {
+		wg.Add(1)
+		go func(userId string, ch chan<- string, wg *sync.WaitGroup) {
+			defer wg.Done()
+			user, err := cl.GetUser(&GetUserRequest{Id: userId})
+			if err != nil {
+				return
+			}
+			if user == nil {
+				return
+			}
+			if !user.IsGroupMember(groupId) {
+				return
+			}
+			ch <- user.DN
+		}(id, ch, wg)
+	}
+	wg.Wait()
+	close(ch)
+
+	var toDel []string
+	for dn := range ch {
+		toDel = append(toDel, dn)
+	}
+	if len(toDel) == 0 {
+		return 0, nil
+	}
+
+	newMembers := popDelGroupMembers(group, toDel)
+	if err := cl.updateAttribute(group.DN, "member", newMembers); err != nil {
+		return 0, err
+	}
+
+	return len(toDel), nil
+}
+
+func popDelGroupMembers(g *Group, toDel []string) []string {
+	result := []string{}
+	for _, memberDN := range g.MembersDn() {
+		if !generigo.StringInSlice(memberDN, toDel) {
+			result = append(result, memberDN)
+		}
+	}
 	return result
 }

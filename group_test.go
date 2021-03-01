@@ -94,3 +94,30 @@ func Test_AddGroupMembers(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, toAdd)
 }
+
+func Test_popDelGroupMembers(t *testing.T) {
+	group := &Group{
+		Members: []GroupMember{
+			{DN: "oldone"},
+			{DN: "oldone2"},
+			{DN: "oldone3"},
+		},
+	}
+
+	notChanged := popDelGroupMembers(group, nil)
+	require.Equal(t, group.MembersDn(), notChanged)
+
+	changed := popDelGroupMembers(group, []string{"oldone2"})
+	require.Equal(t, []string{"oldone", "oldone3"}, changed)
+}
+
+func Test_DeleteGroupMembers(t *testing.T) {
+	cl := New(&Config{}, WithLdapClient(&mockClient{}))
+
+	_, err := cl.DeleteGroupMembers("group2", "user1")
+	require.Error(t, err)
+
+	toAdd, err := cl.DeleteGroupMembers("group1", "user1")
+	require.NoError(t, err)
+	require.Equal(t, 1, toAdd)
+}
