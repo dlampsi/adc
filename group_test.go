@@ -49,8 +49,19 @@ func Test_Client_GetGroup(t *testing.T) {
 	_, err = cl.GetGroup(req)
 	require.Error(t, err)
 
-	req = &GetGroupequest{Id: "group1", SkipMembersSearch: true}
+	req = &GetGroupequest{Id: "groupFake", SkipMembersSearch: true}
 	group, err := cl.GetGroup(req)
+	require.NoError(t, err)
+	require.Nil(t, group)
+
+	dnReq := &GetGroupequest{Dn: "OU=group1,DC=company,DC=com", SkipMembersSearch: true}
+	groupByDn, err := cl.GetGroup(dnReq)
+	require.NoError(t, err)
+	require.NotNil(t, groupByDn)
+	require.Equal(t, dnReq.Dn, groupByDn.DN)
+
+	req = &GetGroupequest{Id: "group1", SkipMembersSearch: true}
+	group, err = cl.GetGroup(req)
 	require.NoError(t, err)
 	require.NotNil(t, group)
 	require.Equal(t, req.Id, group.Id)
@@ -90,9 +101,26 @@ func Test_AddGroupMembers(t *testing.T) {
 	_, err := cl.AddGroupMembers("group2", "user1")
 	require.Error(t, err)
 
-	toAdd, err := cl.AddGroupMembers("group1", "user3")
+	_, err = cl.AddGroupMembers("groupFake", "user1")
+	require.Error(t, err)
+
+	// Non exists user
+	added, err := cl.AddGroupMembers("group1", "userFake")
 	require.NoError(t, err)
-	require.Equal(t, 1, toAdd)
+	require.Equal(t, 0, added)
+	// Error user
+	added, err = cl.AddGroupMembers("group1", "user2")
+	require.NoError(t, err)
+	require.Equal(t, 0, added)
+	// Already member user
+	added, err = cl.AddGroupMembers("group1", "user1")
+	require.NoError(t, err)
+	require.Equal(t, 0, added)
+	// Ok user
+	added, err = cl.AddGroupMembers("group1", "user3")
+	require.NoError(t, err)
+	require.Equal(t, 1, added)
+
 }
 
 func Test_popDelGroupMembers(t *testing.T) {
@@ -117,9 +145,26 @@ func Test_DeleteGroupMembers(t *testing.T) {
 	_, err := cl.DeleteGroupMembers("group2", "user1")
 	require.Error(t, err)
 
-	toAdd, err := cl.DeleteGroupMembers("group1", "user1")
+	_, err = cl.DeleteGroupMembers("groupFake", "user1")
+	require.Error(t, err)
+
+	// Non exists user
+	deleted, err := cl.DeleteGroupMembers("group1", "userFake")
 	require.NoError(t, err)
-	require.Equal(t, 1, toAdd)
+	require.Equal(t, 0, deleted)
+	// Error user
+	deleted, err = cl.DeleteGroupMembers("group1", "user2")
+	require.NoError(t, err)
+	require.Equal(t, 0, deleted)
+	// Already not member user
+	deleted, err = cl.DeleteGroupMembers("group1", "user3")
+	require.NoError(t, err)
+	require.Equal(t, 0, deleted)
+	// Ok user
+	deleted, err = cl.DeleteGroupMembers("group1", "user1")
+	require.NoError(t, err)
+	require.Equal(t, 1, deleted)
+
 }
 
 func Test_Group_MembersDn(t *testing.T) {

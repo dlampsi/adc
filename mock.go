@@ -29,7 +29,15 @@ func (cl *mockClient) Close() {}
 func (cl *mockClient) SetTimeout(time.Duration) {}
 
 func (cl *mockClient) Bind(username, password string) error {
-	return nil
+	if username == "mrError" {
+		return errors.New("error for tests")
+	}
+	if username == "validUser" {
+		if password == "validPass" {
+			return nil
+		}
+	}
+	return errors.New("unauthorised")
 }
 
 func (cl *mockClient) UnauthenticatedBind(username string) error {

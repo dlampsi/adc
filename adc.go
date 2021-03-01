@@ -55,9 +55,6 @@ func (cl *Client) Config() *Config {
 
 // Connects to AD server and store connection into client.
 func (cl *Client) Connect() error {
-	if cl.ldapCl != nil {
-		return nil
-	}
 	conn, err := cl.connect(cl.cfg.Bind)
 	if err != nil {
 		return fmt.Errorf("can't connect: %s", err.Error())
@@ -67,21 +64,29 @@ func (cl *Client) Connect() error {
 }
 
 // Connects and bind to LDAP server by provided bind account.
-func (cl *Client) connect(bind *BindAccount) (*ldap.Conn, error) {
-	var opts []ldap.DialOpt
-	if strings.HasPrefix("ldaps://", cl.cfg.URL) {
-		opts = append(opts, ldap.DialWithTLSConfig(&tls.Config{InsecureSkipVerify: cl.cfg.InsecureTLS}))
+func (cl *Client) connect(bind *BindAccount) (ldap.Client, error) {
+	ldapCl := cl.ldapCl
+
+	// Use default ldap module connection if no ldap client provided in client
+	if ldapCl == nil {
+		var opts []ldap.DialOpt
+		if strings.HasPrefix("ldaps://", cl.cfg.URL) {
+			opts = append(opts, ldap.DialWithTLSConfig(&tls.Config{InsecureSkipVerify: cl.cfg.InsecureTLS}))
+		}
+		conn, err := ldap.DialURL(cl.cfg.URL, opts...)
+		if err != nil {
+			return nil, err
+		}
+		ldapCl = conn
 	}
-	conn, err := ldap.DialURL(cl.cfg.URL, opts...)
-	if err != nil {
-		return nil, err
-	}
+
 	if bind != nil {
-		if err := conn.Bind(bind.DN, bind.Password); err != nil {
+		if err := ldapCl.Bind(bind.DN, bind.Password); err != nil {
 			return nil, err
 		}
 	}
-	return conn, nil
+
+	return ldapCl, nil
 }
 
 // Closes connection to AD.
