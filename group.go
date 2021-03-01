@@ -130,10 +130,20 @@ func (cl *Client) getGroupMembers(dn string) ([]GroupMember, error) {
 	return result, nil
 }
 
+// Returns list of group members DNs.
 func (g *Group) MembersDn() []string {
 	var result []string
 	for _, m := range g.Members {
 		result = append(result, m.DN)
+	}
+	return result
+}
+
+// Returns list of group members IDs.
+func (g *Group) MembersId() []string {
+	var result []string
+	for _, m := range g.Members {
+		result = append(result, m.Id)
 	}
 	return result
 }

@@ -121,3 +121,27 @@ func Test_DeleteGroupMembers(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, toAdd)
 }
+
+func Test_Group_MembersDn(t *testing.T) {
+	g := &Group{
+		Members: []GroupMember{},
+	}
+	require.Nil(t, g.MembersDn())
+
+	newMem := GroupMember{Id: "someId", DN: "someDn"}
+	g.Members = append(g.Members, newMem)
+	require.NotNil(t, g.MembersDn())
+	require.Contains(t, g.MembersDn(), newMem.DN)
+}
+
+func Test_Group_MembersId(t *testing.T) {
+	g := &Group{
+		Members: []GroupMember{},
+	}
+	require.Nil(t, g.MembersId())
+
+	newMem := GroupMember{Id: "someId", DN: "someDn"}
+	g.Members = append(g.Members, newMem)
+	require.NotNil(t, g.MembersId())
+	require.Contains(t, g.MembersId(), newMem.Id)
+}
