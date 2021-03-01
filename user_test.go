@@ -49,8 +49,19 @@ func Test_Client_GetUser(t *testing.T) {
 	_, err = cl.GetUser(req)
 	require.Error(t, err)
 
-	req = &GetUserRequest{Id: "user1", SkipGroupsSearch: true}
+	req = &GetUserRequest{Id: "userFake", SkipGroupsSearch: true}
 	user, err := cl.GetUser(req)
+	require.NoError(t, err)
+	require.Nil(t, user)
+
+	dnReq := &GetUserRequest{Dn: "OU=user1,DC=company,DC=com", SkipGroupsSearch: true}
+	groupByDn, err := cl.GetUser(dnReq)
+	require.NoError(t, err)
+	require.NotNil(t, groupByDn)
+	require.Equal(t, dnReq.Dn, groupByDn.DN)
+
+	req = &GetUserRequest{Id: "user1", SkipGroupsSearch: true}
+	user, err = cl.GetUser(req)
 	require.NoError(t, err)
 	require.NotNil(t, user)
 	require.Equal(t, req.Id, user.Id)
@@ -83,4 +94,28 @@ func Test_User_IsGroupMember(t *testing.T) {
 	require.Equal(t, false, u.IsGroupMember("group3"))
 	require.Equal(t, true, u.IsGroupMember("group1"))
 	require.Equal(t, true, u.IsGroupMember("group2"))
+}
+
+func Test_User_GroupsDn(t *testing.T) {
+	u := &User{
+		Groups: []UserGroup{},
+	}
+	require.Nil(t, u.GroupsDn())
+
+	newGroup := UserGroup{Id: "someId", DN: "someDn"}
+	u.Groups = append(u.Groups, newGroup)
+	require.NotNil(t, u.GroupsDn())
+	require.Contains(t, u.GroupsDn(), newGroup.DN)
+}
+
+func Test_User_GroupsId(t *testing.T) {
+	u := &User{
+		Groups: []UserGroup{},
+	}
+
+	require.Nil(t, u.GroupsId())
+	newGroup := UserGroup{Id: "someId", DN: "someDn"}
+	u.Groups = append(u.Groups, newGroup)
+	require.NotNil(t, u.GroupsId())
+	require.Contains(t, u.GroupsId(), newGroup.Id)
 }

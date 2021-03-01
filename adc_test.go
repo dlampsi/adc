@@ -43,4 +43,28 @@ func Test_Client_Connect(t *testing.T) {
 	err := cl.Connect()
 	require.NoError(t, err)
 	cl.Disconnect()
+
+	cfg := &Config{
+		Bind: &BindAccount{DN: "fakeone", Password: "fake"},
+	}
+	cl = New(cfg, WithLdapClient(mock))
+	err = cl.Connect()
+	require.Error(t, err)
+
+	cfg.Bind.DN = "mrError"
+	cl = New(cfg, WithLdapClient(mock))
+	err = cl.Connect()
+	require.Error(t, err)
+
+	cfg.Bind.DN = "validUser"
+	cfg.Bind.Password = "badPass"
+	cl = New(cfg, WithLdapClient(mock))
+	err = cl.Connect()
+	require.Error(t, err)
+
+	cfg.Bind.DN = "validUser"
+	cfg.Bind.Password = "validPass"
+	cl = New(cfg, WithLdapClient(mock))
+	err = cl.Connect()
+	require.NoError(t, err)
 }

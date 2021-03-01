@@ -136,3 +136,21 @@ func (u *User) IsGroupMember(groupId string) bool {
 	}
 	return false
 }
+
+// Returns list of user groups DNs.
+func (u *User) GroupsDn() []string {
+	var result []string
+	for _, g := range u.Groups {
+		result = append(result, g.DN)
+	}
+	return result
+}
+
+// Returns list of user groups IDs.
+func (u *User) GroupsId() []string {
+	var result []string
+	for _, g := range u.Groups {
+		result = append(result, g.Id)
+	}
+	return result
+}
