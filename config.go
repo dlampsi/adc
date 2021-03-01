@@ -49,7 +49,7 @@ func DefaultUsersConfigs() *UsersConfigs {
 	const defaultIdAttribute = "sAMAccountName"
 	return &UsersConfigs{
 		IdAttribute:      defaultIdAttribute,
-		Attributes:       []string{"givenName", "sn", "mail"},
+		Attributes:       []string{defaultIdAttribute, "givenName", "sn", "mail"},
 		FilterById:       fmt.Sprintf("(&(objectClass=person)(%s=%%v))", defaultIdAttribute),
 		FilterByDn:       "(&(objectClass=person)(distinguishedName=%v))",
 		FilterGroupsByDn: "(&(objectClass=group)(member=%v))",
@@ -75,7 +75,7 @@ func DefaultGroupsConfigs() *GroupsConfigs {
 	const defaultIdAttribute = "sAMAccountName"
 	return &GroupsConfigs{
 		IdAttribute:       defaultIdAttribute,
-		Attributes:        []string{"cn", "description"},
+		Attributes:        []string{defaultIdAttribute, "cn", "description"},
 		FilterById:        fmt.Sprintf("(&(objectClass=group)(%s=%%v))", defaultIdAttribute),
 		FilterByDn:        "(&(objectClass=group)(distinguishedName=%v))",
 		FilterMembersByDn: "(&(objectCategory=person)(memberOf=%v))",
