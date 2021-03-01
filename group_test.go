@@ -108,14 +108,16 @@ func Test_AddGroupMembers(t *testing.T) {
 	added, err := cl.AddGroupMembers("group1", "userFake")
 	require.NoError(t, err)
 	require.Equal(t, 0, added)
+
 	// Error user
-	added, err = cl.AddGroupMembers("group1", "user2")
-	require.NoError(t, err)
-	require.Equal(t, 0, added)
+	_, err = cl.AddGroupMembers("group1", "user2")
+	require.Error(t, err)
+
 	// Already member user
 	added, err = cl.AddGroupMembers("group1", "user1")
 	require.NoError(t, err)
 	require.Equal(t, 0, added)
+
 	// Ok user
 	added, err = cl.AddGroupMembers("group1", "user3")
 	require.NoError(t, err)
@@ -152,14 +154,16 @@ func Test_DeleteGroupMembers(t *testing.T) {
 	deleted, err := cl.DeleteGroupMembers("group1", "userFake")
 	require.NoError(t, err)
 	require.Equal(t, 0, deleted)
+
 	// Error user
-	deleted, err = cl.DeleteGroupMembers("group1", "user2")
-	require.NoError(t, err)
-	require.Equal(t, 0, deleted)
+	_, err = cl.DeleteGroupMembers("group1", "user2")
+	require.Error(t, err)
+
 	// Already not member user
 	deleted, err = cl.DeleteGroupMembers("group1", "user3")
 	require.NoError(t, err)
 	require.Equal(t, 0, deleted)
+
 	// Ok user
 	deleted, err = cl.DeleteGroupMembers("group1", "user1")
 	require.NoError(t, err)

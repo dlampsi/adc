@@ -162,6 +162,15 @@ if err := cl.Connect(); err != nil {
 }
 ```
 
+### Custom logger
+
+You can specifiy custom logger for client. Logger must implement `Logger` interface. Provide logger during client init:
+
+```go
+cl := New(cfg, adc.WithLogger(myCustomLogger))
+```
+
+
 ## Contributing
 
 1. Create new PR from `main` branch
