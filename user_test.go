@@ -73,11 +73,12 @@ func Test_Client_GetUser(t *testing.T) {
 }
 
 func Test_User_IsGroupMember(t *testing.T) {
-	u := &User{
-		Groups: []UserGroup{
-			{Id: "group1"},
-			{Id: "group2"},
-		},
+	u := &User{}
+	require.Equal(t, false, u.IsGroupMember("group1"))
+
+	u.Groups = []UserGroup{
+		{Id: "group1"},
+		{Id: "group2"},
 	}
 	require.Equal(t, false, u.IsGroupMember("group3"))
 	require.Equal(t, true, u.IsGroupMember("group1"))
