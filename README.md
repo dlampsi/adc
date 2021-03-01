@@ -35,7 +35,7 @@ if err := cl.Connect(); err != nil {
 }
 
 // Search for a user
-user, err := cl.GetUserById("userId", nil)
+user, err := cl.GetUser(&adc.GetUserRequest{Id:"userId"})
 if err != nil {
     // Handle error
 }
@@ -45,7 +45,7 @@ if user == nil {
 fmt.Println(user)
 
 // Search for a group
-group, err := cl.GetGroupById("groupId", nil)
+group, err := cl.GetGroup(&adc.GetGroupequest{Id:"groupId"})
 if err != nil {
     // Handle error
 }
@@ -115,7 +115,7 @@ You can parse custom attributes to client config to fetch those attributes durin
 cl.Config().AppendUsesAttributes("manager")
 
 // Search for a user
-user, err := cl.GetUserById("userId", nil)
+user, err := cl.GetUser(&adc.GetUserRequest{Id:"userId"})
 if err != nil {
     // Handle error
 }
@@ -130,7 +130,7 @@ fmt.Println(userManager)
 
 Also you can parse custom attributes during each get requests:
 ```go
-user, err := cl.GetUserById("60078038", []string{"manager"})
+user, err := cl.GetUser(&adc.GetUserRequest{Id: "userId", Attributes: []string{"manager"}})
 if err != nil {
     // Handle error
 }
