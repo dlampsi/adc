@@ -84,3 +84,27 @@ func Test_User_IsGroupMember(t *testing.T) {
 	require.Equal(t, true, u.IsGroupMember("group1"))
 	require.Equal(t, true, u.IsGroupMember("group2"))
 }
+
+func Test_User_GroupsDn(t *testing.T) {
+	u := &User{
+		Groups: []UserGroup{},
+	}
+	require.Nil(t, u.GroupsDn())
+
+	newGroup := UserGroup{Id: "someId", DN: "someDn"}
+	u.Groups = append(u.Groups, newGroup)
+	require.NotNil(t, u.GroupsDn())
+	require.Contains(t, u.GroupsDn(), newGroup.DN)
+}
+
+func Test_User_GroupsId(t *testing.T) {
+	u := &User{
+		Groups: []UserGroup{},
+	}
+
+	require.Nil(t, u.GroupsId())
+	newGroup := UserGroup{Id: "someId", DN: "someDn"}
+	u.Groups = append(u.Groups, newGroup)
+	require.NotNil(t, u.GroupsId())
+	require.Contains(t, u.GroupsId(), newGroup.Id)
+}
