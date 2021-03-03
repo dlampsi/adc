@@ -81,11 +81,7 @@ func (cl *Client) connect(bind *BindAccount) (ldap.Client, error) {
 
 	// Use default ldap module connection if no ldap client provided in client
 	if ldapCl == nil {
-		var opts []ldap.DialOpt
-		if strings.HasPrefix("ldaps://", cl.cfg.URL) {
-			opts = append(opts, ldap.DialWithTLSConfig(&tls.Config{InsecureSkipVerify: cl.cfg.InsecureTLS}))
-		}
-		conn, err := ldap.DialURL(cl.cfg.URL, opts...)
+		conn, err := cl.dialLdap()
 		if err != nil {
 			return nil, err
 		}
@@ -99,6 +95,15 @@ func (cl *Client) connect(bind *BindAccount) (ldap.Client, error) {
 	}
 
 	return ldapCl, nil
+}
+
+// Dials ldap server provided in client configuration.
+func (cl *Client) dialLdap() (ldap.Client, error) {
+	var opts []ldap.DialOpt
+	if strings.HasPrefix("ldaps://", cl.cfg.URL) {
+		opts = append(opts, ldap.DialWithTLSConfig(&tls.Config{InsecureSkipVerify: cl.cfg.InsecureTLS}))
+	}
+	return ldap.DialURL(cl.cfg.URL, opts...)
 }
 
 // Closes connection to AD.
@@ -143,11 +148,14 @@ func (cl *Client) updateAttribute(dn string, attribute string, values []string) 
 
 // Tries to authorise in AcitveDirecotry by provided DN and password and return error if failed.
 func (cl *Client) CheckAuthByDN(dn, password string) error {
-	bind := &BindAccount{DN: dn, Password: password}
-	conn, err := cl.connect(bind)
+	conn, err := cl.dialLdap()
 	if err != nil {
 		return err
 	}
-	conn.Close()
+	defer conn.Close()
+
+	if err := conn.Bind(dn, password); err != nil {
+		return err
+	}
 	return nil
 }
