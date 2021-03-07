@@ -9,6 +9,161 @@ import (
 	"github.com/go-ldap/ldap/v3"
 )
 
+// Entry attribute name, that helps match entry to provided request.
+const mockFiltersAttribute = "filtersToFind"
+
+// Data for mock ldap provider.
+var mockEntriesData = mockEntries{
+	"user1": &ldap.Entry{
+		DN: "OU=user1,DC=company,DC=com",
+		Attributes: []*ldap.EntryAttribute{
+			{Name: "sAMAccountName", Values: []string{"user1"}},
+			{Name: mockFiltersAttribute, Values: []string{
+				"(&(objectClass=person)(sAMAccountName=user1))",
+				"(&(objectClass=person)(distinguishedName=OU=user1,DC=company,DC=com))",
+				"(&(objectCategory=person)(memberOf=OU=group1,DC=company,DC=com))",
+			}},
+		},
+	},
+	"user2": &ldap.Entry{
+		DN: "OU=user2,DC=company,DC=com",
+		Attributes: []*ldap.EntryAttribute{
+			{Name: "sAMAccountName", Values: []string{"user2"}},
+			{Name: mockFiltersAttribute, Values: []string{
+				"(&(objectClass=person)(sAMAccountName=user2))",
+				"(&(objectClass=person)(distinguishedName=OU=user2,DC=company,DC=com))",
+				"(&(objectCategory=person)(memberOf=OU=group2,DC=company,DC=com))",
+			}},
+		},
+	},
+	"userToAdd": &ldap.Entry{
+		DN: "OU=userToAdd,DC=company,DC=com",
+		Attributes: []*ldap.EntryAttribute{
+			{Name: "sAMAccountName", Values: []string{"userToAdd"}},
+			{Name: mockFiltersAttribute, Values: []string{
+				"(&(objectClass=person)(sAMAccountName=userToAdd))",
+				"(&(objectClass=person)(distinguishedName=OU=userToAdd,DC=company,DC=com))",
+				"(&(objectCategory=person)(memberOf=OU=group2,DC=company,DC=com))",
+			}},
+		},
+	},
+	"group1": &ldap.Entry{
+		DN: "OU=group1,DC=company,DC=com",
+		Attributes: []*ldap.EntryAttribute{
+			{Name: "sAMAccountName", Values: []string{"group1"}},
+			{Name: mockFiltersAttribute, Values: []string{
+				"(&(objectClass=group)(sAMAccountName=group1))",
+				"(&(objectClass=group)(distinguishedName=OU=group1,DC=company,DC=com))",
+				"(&(objectClass=group)(member=OU=user1,DC=company,DC=com))",
+			}},
+		},
+	},
+	"group2": &ldap.Entry{
+		DN: "OU=group2,DC=company,DC=com",
+		Attributes: []*ldap.EntryAttribute{
+			{Name: "sAMAccountName", Values: []string{"group2"}},
+			{Name: mockFiltersAttribute, Values: []string{
+				"(&(objectClass=group)(sAMAccountName=group2))",
+				"(&(objectClass=group)(distinguishedName=OU=group2,DC=company,DC=com))",
+				"(&(objectClass=group)(member=OU=user2,DC=company,DC=com))",
+			}},
+		},
+	},
+	"entryForErr": &ldap.Entry{
+		DN: "OU=entryForErr,DC=company,DC=com",
+		Attributes: []*ldap.EntryAttribute{
+			{Name: "sAMAccountName", Values: []string{"entryForErr"}},
+			{Name: mockFiltersAttribute, Values: []string{
+				"(&(objectClass=person)(sAMAccountName=entryForErr))",
+				"(&(objectClass=person)(distinguishedName=OU=entryForErr,DC=company,DC=com))",
+				"(&(objectClass=group)(sAMAccountName=entryForErr))",
+				"(&(objectClass=group)(distinguishedName=OU=entryForErr,DC=company,DC=com))",
+				"(&(objectCategory=person)(memberOf=OU=groupWithErrMember,DC=company,DC=com))",
+			}},
+		},
+	},
+	"groupWithErrMember": &ldap.Entry{
+		DN: "OU=groupWithErrMember,DC=company,DC=com",
+		Attributes: []*ldap.EntryAttribute{
+			{Name: "sAMAccountName", Values: []string{"groupWithErrMember"}},
+			{Name: mockFiltersAttribute, Values: []string{
+				"(&(objectClass=group)(sAMAccountName=groupWithErrMember))",
+				"(&(objectClass=group)(distinguishedName=OU=groupWithErrMember,DC=company,DC=com))",
+				"(&(objectClass=group)(member=OU=entryForErr,DC=company,DC=com))",
+			}},
+		},
+	},
+	"userToReconnect": &ldap.Entry{
+		DN: "OU=userToReconnect,DC=company,DC=com",
+		Attributes: []*ldap.EntryAttribute{
+			{Name: "sAMAccountName", Values: []string{"userToReconnect"}},
+			{Name: mockFiltersAttribute, Values: []string{
+				"(&(objectClass=person)(sAMAccountName=userToReconnect))",
+				"(&(objectClass=person)(distinguishedName=OU=userToReconnect,DC=company,DC=com))",
+			}},
+		},
+	},
+	"notUniq1": &ldap.Entry{
+		DN: "OU=notUniq,DC=company,DC=com",
+		Attributes: []*ldap.EntryAttribute{
+			{Name: "sAMAccountName", Values: []string{"notUniq"}},
+			{Name: mockFiltersAttribute, Values: []string{
+				"(&(objectClass=person)(sAMAccountName=notUniq))",
+				"(&(objectClass=person)(distinguishedName=OU=notUniq,DC=company,DC=com))",
+				"(&(objectClass=group)(sAMAccountName=notUniq))",
+				"(&(objectClass=group)(distinguishedName=OU=notUniq,DC=company,DC=com))",
+			}},
+		},
+	},
+	"notUniq2": &ldap.Entry{
+		DN: "OU=notUniq,DC=company,DC=com",
+		Attributes: []*ldap.EntryAttribute{
+			{Name: "sAMAccountName", Values: []string{"notUniq"}},
+			{Name: mockFiltersAttribute, Values: []string{
+				"(&(objectClass=person)(sAMAccountName=notUniq))",
+				"(&(objectClass=person)(distinguishedName=OU=notUniq,DC=company,DC=com))",
+				"(&(objectClass=group)(sAMAccountName=notUniq))",
+				"(&(objectClass=group)(distinguishedName=OU=notUniq,DC=company,DC=com))",
+			}},
+		},
+	},
+}
+
+type mockEntries map[string]*ldap.Entry
+
+func (me mockEntries) getEntryById(id string) *ldap.Entry {
+	if v, ok := me[id]; ok {
+		return v
+	}
+	return nil
+}
+
+func (me mockEntries) getEntryByDn(dn string) *ldap.Entry {
+	for _, entry := range me {
+		if entry.DN == dn {
+			return entry
+		}
+	}
+	return nil
+}
+
+func (me mockEntries) getEntriesByFilter(filter string) ([]*ldap.Entry, error) {
+	var result []*ldap.Entry
+	for id, entry := range me {
+		filters := entry.GetAttributeValues(mockFiltersAttribute)
+		if generigo.StringInSlice(filter, filters) {
+			if id == "entryForErr" {
+				return nil, errors.New("error for tests")
+			}
+			if id == "userToReconnect" {
+				return nil, ldap.NewError(200, errors.New("connection error"))
+			}
+			result = append(result, entry)
+		}
+	}
+	return result, nil
+}
+
 // Dummy not operational logger.
 type nopLogger struct{}
 
@@ -23,7 +178,6 @@ type mockClient struct {
 var _ ldap.Client = (*mockClient)(nil)
 
 func (cl *mockClient) Start() {
-
 }
 
 func (cl *mockClient) StartTLS(*tls.Config) error {
@@ -34,14 +188,18 @@ func (cl *mockClient) Close() {}
 
 func (cl *mockClient) SetTimeout(time.Duration) {}
 
+var (
+	validMockBind     = &BindAccount{DN: "validUser", Password: "validPass"}
+	invalidMockBind   = &BindAccount{DN: "mrError", Password: "mrErrorPass"}
+	reconnectMockBind = &BindAccount{DN: "OU=userToReconnect,DC=company,DC=com", Password: "validPass"}
+)
+
 func (cl *mockClient) Bind(username, password string) error {
-	if username == "mrError" {
+	if username == invalidMockBind.DN {
 		return errors.New("error for tests")
 	}
-	if username == "validUser" {
-		if password == "validPass" {
-			return nil
-		}
+	if username == validMockBind.DN && password == validMockBind.Password {
+		return nil
 	}
 	return errors.New("unauthorised")
 }
@@ -67,7 +225,11 @@ func (cl *mockClient) Del(*ldap.DelRequest) error {
 }
 
 func (cl *mockClient) Modify(req *ldap.ModifyRequest) error {
-	if req.DN == "OU=group2,DC=company,DC=com" {
+	entry := mockEntriesData.getEntryByDn(req.DN)
+	if entry == nil {
+		return errors.New("entry not found")
+	}
+	if entry.DN == mockEntriesData["entryForErr"].DN {
 		return errors.New("error for tests")
 	}
 	return nil
@@ -90,80 +252,12 @@ type mockDataEntry struct {
 	filters []string
 }
 
-var mockData = map[string]mockDataEntry{
-	"exists_user": {
-		entry: &ldap.Entry{
-			DN: "OU=user1,DC=company,DC=com",
-			Attributes: []*ldap.EntryAttribute{
-				{Name: "sAMAccountName", Values: []string{"user1"}, ByteValues: [][]byte{}},
-			},
-		},
-		filters: []string{
-			"(&(objectClass=person)(sAMAccountName=user1))",
-			"(&(objectClass=person)(distinguishedName=OU=user1,DC=company,DC=com))",
-			"(&(objectCategory=person)(memberOf=OU=group1,DC=company,DC=com))",
-		},
-	},
-	"toadd_user": {
-		entry: &ldap.Entry{
-			DN: "OU=user3,DC=company,DC=com",
-			Attributes: []*ldap.EntryAttribute{
-				{Name: "sAMAccountName", Values: []string{"user3"}, ByteValues: [][]byte{}},
-			},
-		},
-		filters: []string{
-			"(&(objectClass=person)(sAMAccountName=user3))",
-			"(&(objectClass=person)(distinguishedName=OU=user3,DC=company,DC=com))",
-			"(&(objectCategory=person)(memberOf=OU=group3,DC=company,DC=com))",
-		},
-	},
-	"exists_group": {
-		entry: &ldap.Entry{
-			DN: "OU=group1,DC=company,DC=com",
-			Attributes: []*ldap.EntryAttribute{
-				{Name: "sAMAccountName", Values: []string{"group1"}, ByteValues: [][]byte{}},
-			},
-		},
-		filters: []string{
-			"(&(objectClass=group)(sAMAccountName=group1))",
-			"(&(objectClass=group)(distinguishedName=OU=group1,DC=company,DC=com))",
-			"(&(objectClass=group)(member=OU=user1,DC=company,DC=com))",
-		},
-	},
-	"for_errors": {
-		filters: []string{
-			"(&(objectClass=person)(sAMAccountName=user2))",
-			"(&(objectClass=person)(distinguishedName=OU=user2,DC=company,DC=com))",
-			"(&(objectClass=group)(sAMAccountName=group2))",
-			"(&(objectClass=group)(distinguishedName=OU=group2,DC=company,DC=com))",
-		},
-	},
-}
-
 func (cl *mockClient) Search(req *ldap.SearchRequest) (*ldap.SearchResult, error) {
-	if generigo.StringInSlice(req.Filter, mockData["exists_user"].filters) {
-		result := &ldap.SearchResult{}
-		result.Entries = append(result.Entries, mockData["exists_user"].entry)
-		return result, nil
+	entries, err := mockEntriesData.getEntriesByFilter(req.Filter)
+	if err != nil {
+		return nil, err
 	}
-
-	if generigo.StringInSlice(req.Filter, mockData["exists_group"].filters) {
-		result := &ldap.SearchResult{}
-		result.Entries = append(result.Entries, mockData["exists_group"].entry)
-		return result, nil
-	}
-
-	if generigo.StringInSlice(req.Filter, mockData["toadd_user"].filters) {
-		result := &ldap.SearchResult{}
-		result.Entries = append(result.Entries, mockData["toadd_user"].entry)
-		return result, nil
-	}
-
-	if generigo.StringInSlice(req.Filter, mockData["for_errors"].filters) {
-		return nil, errors.New("error for tests")
-	}
-
-	return &ldap.SearchResult{Entries: nil}, nil
+	return &ldap.SearchResult{Entries: entries}, nil
 }
 
 func (cl *mockClient) SearchWithPaging(searchRequest *ldap.SearchRequest, pagingSize uint32) (*ldap.SearchResult, error) {

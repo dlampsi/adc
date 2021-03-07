@@ -2,8 +2,10 @@
 package adc
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -110,6 +112,51 @@ func (cl *Client) dialLdap() (ldap.Client, error) {
 func (cl *Client) Disconnect() {
 	if cl.ldapCl != nil {
 		cl.ldapCl.Close()
+	}
+}
+
+// Checks connections to AD and tries to reconnect if the connection is lost.
+func (cl *Client) Reconnect(ctx context.Context, ticker *time.Ticker, maxAttempts int) error {
+	_, connErr := cl.searchEntry(&ldap.SearchRequest{
+		BaseDN:       cl.cfg.SearchBase,
+		Scope:        ldap.ScopeWholeSubtree,
+		DerefAliases: ldap.NeverDerefAliases,
+		TimeLimit:    int(cl.cfg.Timeout.Seconds()),
+		Filter:       fmt.Sprintf(cl.cfg.Users.FilterByDn, ldap.EscapeFilter(cl.cfg.Bind.DN)),
+		Attributes:   []string{cl.cfg.Users.IdAttribute},
+	})
+	if connErr == nil {
+		return nil
+	}
+	if !ldap.IsErrorWithCode(connErr, 200) {
+		return connErr
+	}
+
+	if ticker == nil {
+		ticker = time.NewTicker(5 * time.Second)
+	}
+	defer ticker.Stop()
+
+	if maxAttempts == 0 {
+		maxAttempts = 2
+	}
+
+	attempt := 0
+	for {
+		select {
+		case <-ticker.C:
+			if attempt >= maxAttempts {
+				return fmt.Errorf("failed after '%d' attempts. error: %s", attempt, connErr)
+			}
+			attempt++
+			cl.logger.Debugf("Reconnecting to database. Attempt: %d", attempt)
+			if err := cl.Connect(); err == nil {
+				cl.logger.Debug("Successfully reconeted to server")
+				return nil
+			}
+		case <-ctx.Done():
+			return ctx.Err()
+		}
 	}
 }
 

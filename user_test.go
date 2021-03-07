@@ -45,13 +45,22 @@ func Test_Client_GetUser(t *testing.T) {
 	_, badReqErr := cl.GetUser(badReq)
 	require.Error(t, badReqErr)
 
-	req := &GetUserRequest{Id: "user2", SkipGroupsSearch: true}
+	req := &GetUserRequest{Id: "entryForErr", SkipGroupsSearch: true}
 	_, err = cl.GetUser(req)
 	require.Error(t, err)
 
 	req = &GetUserRequest{Id: "userFake", SkipGroupsSearch: true}
 	user, err := cl.GetUser(req)
 	require.NoError(t, err)
+	require.Nil(t, user)
+
+	// Too many entries error
+	user, err = cl.GetUser(&GetUserRequest{
+		Id:               "notUniq",
+		SkipGroupsSearch: true,
+		Attributes:       []string{"sAMAccountName"},
+	})
+	require.Error(t, err)
 	require.Nil(t, user)
 
 	dnReq := &GetUserRequest{Dn: "OU=user1,DC=company,DC=com", SkipGroupsSearch: true}

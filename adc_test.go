@@ -1,6 +1,7 @@
 package adc
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -66,5 +67,45 @@ func Test_Client_Connect(t *testing.T) {
 	cfg.Bind.Password = "validPass"
 	cl = New(cfg, WithLdapClient(mock))
 	err = cl.Connect()
+	require.NoError(t, err)
+}
+
+func Test_Client_Reconnect(t *testing.T) {
+	mock := &mockClient{}
+	cfg := &Config{
+		Bind: validMockBind,
+	}
+	cl := New(cfg, WithLdapClient(mock))
+	err := cl.Connect()
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	err = cl.Reconnect(ctx, time.NewTicker(2*time.Second), 2)
+	require.NoError(t, err)
+
+	cl.cfg.Bind = &BindAccount{DN: mockEntriesData["entryForErr"].DN}
+	err = cl.Reconnect(ctx, time.NewTicker(2*time.Second), 2)
+	require.Error(t, err)
+
+	cl.cfg.Bind = reconnectMockBind
+	err = cl.Reconnect(ctx, nil, 1)
+	require.Error(t, err)
+	err = cl.Reconnect(ctx, time.NewTicker(30*time.Millisecond), 0)
+	require.Error(t, err)
+	err = cl.Reconnect(ctx, time.NewTicker(1*time.Second), 1)
+	require.Error(t, err)
+
+	nctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		time.Sleep(10 * time.Millisecond)
+		cancel()
+	}()
+	err = cl.Reconnect(nctx, time.NewTicker(5*time.Second), 1)
+	require.Error(t, err)
+
+	cl.cfg.Bind = validMockBind
+	err = cl.Reconnect(ctx, time.NewTicker(30*time.Millisecond), 1)
 	require.NoError(t, err)
 }
