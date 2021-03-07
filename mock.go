@@ -25,6 +25,17 @@ var mockEntriesData = mockEntries{
 			}},
 		},
 	},
+	"user2": &ldap.Entry{
+		DN: "OU=user2,DC=company,DC=com",
+		Attributes: []*ldap.EntryAttribute{
+			{Name: "sAMAccountName", Values: []string{"user2"}},
+			{Name: mockFiltersAttribute, Values: []string{
+				"(&(objectClass=person)(sAMAccountName=user2))",
+				"(&(objectClass=person)(distinguishedName=OU=user2,DC=company,DC=com))",
+				"(&(objectCategory=person)(memberOf=OU=group2,DC=company,DC=com))",
+			}},
+		},
+	},
 	"userToAdd": &ldap.Entry{
 		DN: "OU=userToAdd,DC=company,DC=com",
 		Attributes: []*ldap.EntryAttribute{
@@ -44,6 +55,17 @@ var mockEntriesData = mockEntries{
 				"(&(objectClass=group)(sAMAccountName=group1))",
 				"(&(objectClass=group)(distinguishedName=OU=group1,DC=company,DC=com))",
 				"(&(objectClass=group)(member=OU=user1,DC=company,DC=com))",
+			}},
+		},
+	},
+	"group2": &ldap.Entry{
+		DN: "OU=group2,DC=company,DC=com",
+		Attributes: []*ldap.EntryAttribute{
+			{Name: "sAMAccountName", Values: []string{"group2"}},
+			{Name: mockFiltersAttribute, Values: []string{
+				"(&(objectClass=group)(sAMAccountName=group2))",
+				"(&(objectClass=group)(distinguishedName=OU=group2,DC=company,DC=com))",
+				"(&(objectClass=group)(member=OU=user2,DC=company,DC=com))",
 			}},
 		},
 	},

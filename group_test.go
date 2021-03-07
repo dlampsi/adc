@@ -98,7 +98,7 @@ func Test_popAddGroupMembers(t *testing.T) {
 func Test_AddGroupMembers(t *testing.T) {
 	cl := New(&Config{}, WithLdapClient(&mockClient{}))
 
-	_, err := cl.AddGroupMembers("group2", "user1")
+	_, err := cl.AddGroupMembers("entryForErr", "user1")
 	require.Error(t, err)
 
 	_, err = cl.AddGroupMembers("groupFake", "user1")
@@ -144,7 +144,7 @@ func Test_popDelGroupMembers(t *testing.T) {
 func Test_DeleteGroupMembers(t *testing.T) {
 	cl := New(&Config{}, WithLdapClient(&mockClient{}))
 
-	_, err := cl.DeleteGroupMembers("group2", "user1")
+	_, err := cl.DeleteGroupMembers("entryForErr", "user1")
 	require.Error(t, err)
 
 	_, err = cl.DeleteGroupMembers("groupFake", "user1")
@@ -160,7 +160,7 @@ func Test_DeleteGroupMembers(t *testing.T) {
 	require.Error(t, err)
 
 	// Already not member user
-	deleted, err = cl.DeleteGroupMembers("group1", "user3")
+	deleted, err = cl.DeleteGroupMembers("group1", "user2")
 	require.NoError(t, err)
 	require.Equal(t, 0, deleted)
 
