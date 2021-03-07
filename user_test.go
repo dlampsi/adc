@@ -45,7 +45,7 @@ func Test_Client_GetUser(t *testing.T) {
 	_, badReqErr := cl.GetUser(badReq)
 	require.Error(t, badReqErr)
 
-	req := &GetUserRequest{Id: "user2", SkipGroupsSearch: true}
+	req := &GetUserRequest{Id: "entryForErr", SkipGroupsSearch: true}
 	_, err = cl.GetUser(req)
 	require.Error(t, err)
 

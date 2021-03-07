@@ -45,7 +45,7 @@ func Test_Client_GetGroup(t *testing.T) {
 	_, badReqErr := cl.GetGroup(badReq)
 	require.Error(t, badReqErr)
 
-	req := &GetGroupequest{Id: "group2", SkipMembersSearch: true}
+	req := &GetGroupequest{Id: "entryForErr", SkipMembersSearch: true}
 	_, err = cl.GetGroup(req)
 	require.Error(t, err)
 
@@ -110,7 +110,7 @@ func Test_AddGroupMembers(t *testing.T) {
 	require.Equal(t, 0, added)
 
 	// Error user
-	_, err = cl.AddGroupMembers("group1", "user2")
+	_, err = cl.AddGroupMembers("group1", "entryForErr")
 	require.Error(t, err)
 
 	// Already member user
@@ -119,7 +119,7 @@ func Test_AddGroupMembers(t *testing.T) {
 	require.Equal(t, 0, added)
 
 	// Ok user
-	added, err = cl.AddGroupMembers("group1", "user3")
+	added, err = cl.AddGroupMembers("group1", "userToAdd")
 	require.NoError(t, err)
 	require.Equal(t, 1, added)
 
@@ -156,7 +156,7 @@ func Test_DeleteGroupMembers(t *testing.T) {
 	require.Equal(t, 0, deleted)
 
 	// Error user
-	_, err = cl.DeleteGroupMembers("group1", "user2")
+	_, err = cl.DeleteGroupMembers("group1", "entryForErr")
 	require.Error(t, err)
 
 	// Already not member user
