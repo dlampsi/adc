@@ -171,6 +171,20 @@ cl := New(cfg, adc.WithLogger(myCustomLogger))
 ```
 
 
+### Reconnect
+
+Client has reconnect method, that validates connection to server and reconnects to it with provided ticker interval and retries attempts count.
+
+Exxample for recconect each 5 secconds with 24 retrie attempts:
+
+```go
+err := cl.Reconnect(nctx, time.NewTicker(5*time.Second), 24)
+if err != nil {
+    // Handle error
+}
+```
+
+
 ## Contributing
 
 1. Create new PR from `main` branch
