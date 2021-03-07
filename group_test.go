@@ -54,6 +54,23 @@ func Test_Client_GetGroup(t *testing.T) {
 	require.NoError(t, err)
 	require.Nil(t, group)
 
+	// Too many entries error
+	group, err = cl.GetGroup(&GetGroupequest{
+		Id:                "notUniq",
+		SkipMembersSearch: true,
+		Attributes:        []string{"sAMAccountName"},
+	})
+	require.Error(t, err)
+	require.Nil(t, group)
+
+	// Group with err members get
+	group, err = cl.GetGroup(&GetGroupequest{
+		Id:                "groupWithErrMember",
+		SkipMembersSearch: false,
+	})
+	require.Error(t, err)
+	require.Nil(t, group)
+
 	dnReq := &GetGroupequest{Dn: "OU=group1,DC=company,DC=com", SkipMembersSearch: true}
 	groupByDn, err := cl.GetGroup(dnReq)
 	require.NoError(t, err)

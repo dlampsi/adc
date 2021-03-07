@@ -78,6 +78,18 @@ var mockEntriesData = mockEntries{
 				"(&(objectClass=person)(distinguishedName=OU=entryForErr,DC=company,DC=com))",
 				"(&(objectClass=group)(sAMAccountName=entryForErr))",
 				"(&(objectClass=group)(distinguishedName=OU=entryForErr,DC=company,DC=com))",
+				"(&(objectCategory=person)(memberOf=OU=groupWithErrMember,DC=company,DC=com))",
+			}},
+		},
+	},
+	"groupWithErrMember": &ldap.Entry{
+		DN: "OU=groupWithErrMember,DC=company,DC=com",
+		Attributes: []*ldap.EntryAttribute{
+			{Name: "sAMAccountName", Values: []string{"groupWithErrMember"}},
+			{Name: mockFiltersAttribute, Values: []string{
+				"(&(objectClass=group)(sAMAccountName=groupWithErrMember))",
+				"(&(objectClass=group)(distinguishedName=OU=groupWithErrMember,DC=company,DC=com))",
+				"(&(objectClass=group)(member=OU=entryForErr,DC=company,DC=com))",
 			}},
 		},
 	},
@@ -88,6 +100,30 @@ var mockEntriesData = mockEntries{
 			{Name: mockFiltersAttribute, Values: []string{
 				"(&(objectClass=person)(sAMAccountName=userToReconnect))",
 				"(&(objectClass=person)(distinguishedName=OU=userToReconnect,DC=company,DC=com))",
+			}},
+		},
+	},
+	"notUniq1": &ldap.Entry{
+		DN: "OU=notUniq,DC=company,DC=com",
+		Attributes: []*ldap.EntryAttribute{
+			{Name: "sAMAccountName", Values: []string{"notUniq"}},
+			{Name: mockFiltersAttribute, Values: []string{
+				"(&(objectClass=person)(sAMAccountName=notUniq))",
+				"(&(objectClass=person)(distinguishedName=OU=notUniq,DC=company,DC=com))",
+				"(&(objectClass=group)(sAMAccountName=notUniq))",
+				"(&(objectClass=group)(distinguishedName=OU=notUniq,DC=company,DC=com))",
+			}},
+		},
+	},
+	"notUniq2": &ldap.Entry{
+		DN: "OU=notUniq,DC=company,DC=com",
+		Attributes: []*ldap.EntryAttribute{
+			{Name: "sAMAccountName", Values: []string{"notUniq"}},
+			{Name: mockFiltersAttribute, Values: []string{
+				"(&(objectClass=person)(sAMAccountName=notUniq))",
+				"(&(objectClass=person)(distinguishedName=OU=notUniq,DC=company,DC=com))",
+				"(&(objectClass=group)(sAMAccountName=notUniq))",
+				"(&(objectClass=group)(distinguishedName=OU=notUniq,DC=company,DC=com))",
 			}},
 		},
 	},
