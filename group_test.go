@@ -36,8 +36,7 @@ func Test_GetGroupRequest_Validate(t *testing.T) {
 }
 
 func Test_Client_GetGroup(t *testing.T) {
-	cl := New(&Config{}, WithLdapClient(&mockClient{}))
-
+	cl := New(&Config{}, withMock())
 	err := cl.Connect()
 	require.NoError(t, err)
 
@@ -113,9 +112,11 @@ func Test_popAddGroupMembers(t *testing.T) {
 }
 
 func Test_AddGroupMembers(t *testing.T) {
-	cl := New(&Config{}, WithLdapClient(&mockClient{}))
+	cl := New(&Config{}, withMock())
+	err := cl.Connect()
+	require.NoError(t, err)
 
-	_, err := cl.AddGroupMembers("entryForErr", "user1")
+	_, err = cl.AddGroupMembers("entryForErr", "user1")
 	require.Error(t, err)
 
 	_, err = cl.AddGroupMembers("groupFake", "user1")
@@ -159,9 +160,11 @@ func Test_popDelGroupMembers(t *testing.T) {
 }
 
 func Test_DeleteGroupMembers(t *testing.T) {
-	cl := New(&Config{}, WithLdapClient(&mockClient{}))
+	cl := New(&Config{}, withMock())
+	err := cl.Connect()
+	require.NoError(t, err)
 
-	_, err := cl.DeleteGroupMembers("entryForErr", "user1")
+	_, err = cl.DeleteGroupMembers("entryForErr", "user1")
 	require.Error(t, err)
 
 	_, err = cl.DeleteGroupMembers("groupFake", "user1")

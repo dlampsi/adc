@@ -36,8 +36,7 @@ func Test_GetUserRequest_Validate(t *testing.T) {
 }
 
 func Test_Client_GetUser(t *testing.T) {
-	cl := New(&Config{}, WithLdapClient(&mockClient{}))
-
+	cl := New(&Config{}, withMock())
 	err := cl.Connect()
 	require.NoError(t, err)
 
