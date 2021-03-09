@@ -142,10 +142,10 @@ func (cl *Client) Reconnect(ctx context.Context, ticker *time.Ticker, maxAttempt
 				return fmt.Errorf("failed after '%d' attempts. error: %s", attempt, connErr)
 			}
 			attempt++
-			cl.logger.Debugf("Reconnecting to database. Attempt: %d", attempt)
+			cl.logger.Debugf("Reconnecting to AD server. Attempt: %d", attempt)
 			cl.Disconnect()
 			if err := cl.Connect(); err == nil {
-				cl.logger.Debug("Successfully reconeted to server")
+				cl.logger.Debug("Successfully reconneted to AD server")
 				return nil
 			}
 		case <-ctx.Done():
