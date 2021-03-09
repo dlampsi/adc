@@ -128,9 +128,6 @@ func (cl *Client) Reconnect(ctx context.Context, ticker *time.Ticker, maxAttempt
 	if connErr == nil {
 		return nil
 	}
-	if !ldap.IsErrorWithCode(connErr, 200) {
-		return connErr
-	}
 
 	if ticker == nil {
 		ticker = time.NewTicker(5 * time.Second)
