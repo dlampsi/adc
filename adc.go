@@ -18,9 +18,10 @@ const (
 
 // Active Direcotry client.
 type Client struct {
-	cfg    *Config
-	ldapCl ldap.Client
-	logger Logger
+	cfg     *Config
+	ldapCl  ldap.Client
+	logger  Logger
+	useMock bool
 }
 
 // Creates new client and populate provided config and options.
@@ -53,14 +54,14 @@ type Logger interface {
 
 type Option func(*Client)
 
-// Specifies ldap client for AD client.
-func WithLdapClient(l ldap.Client) Option {
-	return func(cl *Client) { cl.ldapCl = l }
-}
-
 // Specifies custom logger for client.
 func WithLogger(l Logger) Option {
 	return func(cl *Client) { cl.logger = l }
+}
+
+// Enables mock ldap interface for client
+func withMock() Option {
+	return func(cl *Client) { cl.useMock = true }
 }
 
 func (cl *Client) Config() *Config {
@@ -79,28 +80,23 @@ func (cl *Client) Connect() error {
 
 // Connects and bind to LDAP server by provided bind account.
 func (cl *Client) connect(bind *BindAccount) (ldap.Client, error) {
-	ldapCl := cl.ldapCl
-
-	// Use default ldap module connection if no ldap client provided in client
-	if ldapCl == nil {
-		conn, err := cl.dialLdap()
-		if err != nil {
-			return nil, err
-		}
-		ldapCl = conn
+	conn, err := cl.dial()
+	if err != nil {
+		return nil, err
 	}
-
 	if bind != nil {
-		if err := ldapCl.Bind(bind.DN, bind.Password); err != nil {
+		if err := conn.Bind(bind.DN, bind.Password); err != nil {
 			return nil, err
 		}
 	}
-
-	return ldapCl, nil
+	return conn, nil
 }
 
 // Dials ldap server provided in client configuration.
-func (cl *Client) dialLdap() (ldap.Client, error) {
+func (cl *Client) dial() (ldap.Client, error) {
+	if cl.useMock {
+		return &mockClient{}, nil
+	}
 	var opts []ldap.DialOpt
 	if strings.HasPrefix("ldaps://", cl.cfg.URL) {
 		opts = append(opts, ldap.DialWithTLSConfig(&tls.Config{InsecureSkipVerify: cl.cfg.InsecureTLS}))
@@ -147,6 +143,7 @@ func (cl *Client) Reconnect(ctx context.Context, ticker *time.Ticker, maxAttempt
 			}
 			attempt++
 			cl.logger.Debugf("Reconnecting to database. Attempt: %d", attempt)
+			cl.Disconnect()
 			if err := cl.Connect(); err == nil {
 				cl.logger.Debug("Successfully reconeted to server")
 				return nil
@@ -192,7 +189,7 @@ func (cl *Client) updateAttribute(dn string, attribute string, values []string) 
 
 // Tries to authorise in AcitveDirecotry by provided DN and password and return error if failed.
 func (cl *Client) CheckAuthByDN(dn, password string) error {
-	conn, err := cl.dialLdap()
+	conn, err := cl.dial()
 	if err != nil {
 		return err
 	}
