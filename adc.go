@@ -98,7 +98,7 @@ func (cl *Client) dial() (ldap.Client, error) {
 		return &mockClient{}, nil
 	}
 	var opts []ldap.DialOpt
-	if strings.HasPrefix("ldaps://", cl.cfg.URL) {
+	if strings.HasPrefix(cl.cfg.URL, "ldaps://") {
 		opts = append(opts, ldap.DialWithTLSConfig(&tls.Config{InsecureSkipVerify: cl.cfg.InsecureTLS}))
 	}
 	return ldap.DialURL(cl.cfg.URL, opts...)
