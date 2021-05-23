@@ -112,7 +112,7 @@ func (cl *Client) Disconnect() {
 }
 
 // Checks connections to AD and tries to reconnect if the connection is lost.
-func (cl *Client) Reconnect(ctx context.Context, ticker *time.Ticker, maxAttempts int) error {
+func (cl *Client) Reconnect(ctx context.Context, tickerDuration time.Duration, maxAttempts int) error {
 	_, connErr := cl.searchEntry(&ldap.SearchRequest{
 		BaseDN:       cl.cfg.SearchBase,
 		Scope:        ldap.ScopeWholeSubtree,
@@ -125,9 +125,10 @@ func (cl *Client) Reconnect(ctx context.Context, ticker *time.Ticker, maxAttempt
 		return nil
 	}
 
-	if ticker == nil {
-		ticker = time.NewTicker(5 * time.Second)
+	if tickerDuration == 0 {
+		tickerDuration = 5 * time.Second
 	}
+	ticker := time.NewTicker(tickerDuration)
 	defer ticker.Stop()
 
 	if maxAttempts == 0 {

@@ -34,7 +34,7 @@ func (u *User) GetStringAttribute(name string) string {
 	return ""
 }
 
-type GetUserRequest struct {
+type GetUserArgs struct {
 	// User ID to search.
 	Id string `json:"id"`
 	// Optional User DN. Overwrites ID if provided in request.
@@ -45,24 +45,21 @@ type GetUserRequest struct {
 	SkipGroupsSearch bool `json:"skip_groups_search"`
 }
 
-func (req *GetUserRequest) Validate() error {
-	if req == nil {
-		return errors.New("nil request")
-	}
-	if req.Id == "" && req.Dn == "" {
+func (args GetUserArgs) Validate() error {
+	if args.Id == "" && args.Dn == "" {
 		return errors.New("neither of ID of DN provided")
 	}
 	return nil
 }
 
-func (cl *Client) GetUser(r *GetUserRequest) (*User, error) {
-	if err := r.Validate(); err != nil {
+func (cl *Client) GetUser(args GetUserArgs) (*User, error) {
+	if err := args.Validate(); err != nil {
 		return nil, err
 	}
 
-	filter := fmt.Sprintf(cl.cfg.Users.FilterById, r.Id)
-	if r.Dn != "" {
-		filter = fmt.Sprintf(cl.cfg.Users.FilterByDn, ldap.EscapeFilter(r.Dn))
+	filter := fmt.Sprintf(cl.cfg.Users.FilterById, args.Id)
+	if args.Dn != "" {
+		filter = fmt.Sprintf(cl.cfg.Users.FilterByDn, ldap.EscapeFilter(args.Dn))
 	}
 
 	req := &ldap.SearchRequest{
@@ -73,8 +70,8 @@ func (cl *Client) GetUser(r *GetUserRequest) (*User, error) {
 		Filter:       filter,
 		Attributes:   cl.cfg.Users.Attributes,
 	}
-	if r.Attributes != nil {
-		req.Attributes = r.Attributes
+	if args.Attributes != nil {
+		req.Attributes = args.Attributes
 	}
 
 	entry, err := cl.searchEntry(req)
@@ -94,7 +91,7 @@ func (cl *Client) GetUser(r *GetUserRequest) (*User, error) {
 		result.Attributes[a.Name] = entry.GetAttributeValue(a.Name)
 	}
 
-	if !r.SkipGroupsSearch {
+	if !args.SkipGroupsSearch {
 		groups, err := cl.getUserGroups(entry.DN)
 		if err != nil {
 			return nil, fmt.Errorf("can't get user groups: %s", err.Error())
