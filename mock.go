@@ -131,13 +131,6 @@ var mockEntriesData = mockEntries{
 
 type mockEntries map[string]*ldap.Entry
 
-func (me mockEntries) getEntryById(id string) *ldap.Entry {
-	if v, ok := me[id]; ok {
-		return v
-	}
-	return nil
-}
-
 func (me mockEntries) getEntryByDn(dn string) *ldap.Entry {
 	for _, entry := range me {
 		if entry.DN == dn {
@@ -245,11 +238,6 @@ func (cl *mockClient) Compare(dn, attribute, value string) (bool, error) {
 
 func (cl *mockClient) PasswordModify(*ldap.PasswordModifyRequest) (*ldap.PasswordModifyResult, error) {
 	return nil, nil
-}
-
-type mockDataEntry struct {
-	entry   *ldap.Entry
-	filters []string
 }
 
 func (cl *mockClient) Search(req *ldap.SearchRequest) (*ldap.SearchResult, error) {
