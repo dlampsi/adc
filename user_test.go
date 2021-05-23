@@ -21,16 +21,16 @@ func Test_User_GetStringAttribute(t *testing.T) {
 	require.Empty(t, u.GetStringAttribute("nonexists"))
 }
 
-func Test_GetUserRequest_Validate(t *testing.T) {
-	var req *GetUserRequest
+func Test_GetUserArgs_Validate(t *testing.T) {
+	var req GetUserArgs
 	err := req.Validate()
 	require.Error(t, err)
 
-	req = &GetUserRequest{}
+	req = GetUserArgs{}
 	err1 := req.Validate()
 	require.Error(t, err1)
 
-	req = &GetUserRequest{Id: "fake"}
+	req = GetUserArgs{Id: "fake"}
 	errOk := req.Validate()
 	require.NoError(t, errOk)
 }
@@ -40,21 +40,21 @@ func Test_Client_GetUser(t *testing.T) {
 	err := cl.Connect()
 	require.NoError(t, err)
 
-	var badReq *GetUserRequest
-	_, badReqErr := cl.GetUser(badReq)
+	var badArgs GetUserArgs
+	_, badReqErr := cl.GetUser(badArgs)
 	require.Error(t, badReqErr)
 
-	req := &GetUserRequest{Id: "entryForErr", SkipGroupsSearch: true}
-	_, err = cl.GetUser(req)
+	args := GetUserArgs{Id: "entryForErr", SkipGroupsSearch: true}
+	_, err = cl.GetUser(args)
 	require.Error(t, err)
 
-	req = &GetUserRequest{Id: "userFake", SkipGroupsSearch: true}
-	user, err := cl.GetUser(req)
+	args = GetUserArgs{Id: "userFake", SkipGroupsSearch: true}
+	user, err := cl.GetUser(args)
 	require.NoError(t, err)
 	require.Nil(t, user)
 
 	// Too many entries error
-	user, err = cl.GetUser(&GetUserRequest{
+	user, err = cl.GetUser(GetUserArgs{
 		Id:               "notUniq",
 		SkipGroupsSearch: true,
 		Attributes:       []string{"sAMAccountName"},
@@ -62,31 +62,31 @@ func Test_Client_GetUser(t *testing.T) {
 	require.Error(t, err)
 	require.Nil(t, user)
 
-	dnReq := &GetUserRequest{Dn: "OU=user1,DC=company,DC=com", SkipGroupsSearch: true}
+	dnReq := GetUserArgs{Dn: "OU=user1,DC=company,DC=com", SkipGroupsSearch: true}
 	groupByDn, err := cl.GetUser(dnReq)
 	require.NoError(t, err)
 	require.NotNil(t, groupByDn)
 	require.Equal(t, dnReq.Dn, groupByDn.DN)
 
-	req = &GetUserRequest{Id: "user1", SkipGroupsSearch: true}
-	user, err = cl.GetUser(req)
+	args = GetUserArgs{Id: "user1", SkipGroupsSearch: true}
+	user, err = cl.GetUser(args)
 	require.NoError(t, err)
 	require.NotNil(t, user)
-	require.Equal(t, req.Id, user.Id)
+	require.Equal(t, args.Id, user.Id)
 	require.Nil(t, user.Groups)
 
-	req.Attributes = []string{"something"}
-	user, err = cl.GetUser(req)
+	args.Attributes = []string{"something"}
+	user, err = cl.GetUser(args)
 	require.NoError(t, err)
 	require.NotNil(t, user)
-	require.Equal(t, req.Id, user.Id)
+	require.Equal(t, args.Id, user.Id)
 	require.Nil(t, user.Groups)
 
-	req.SkipGroupsSearch = false
-	user, err = cl.GetUser(req)
+	args.SkipGroupsSearch = false
+	user, err = cl.GetUser(args)
 	require.NoError(t, err)
 	require.NotNil(t, user)
-	require.Equal(t, req.Id, user.Id)
+	require.Equal(t, args.Id, user.Id)
 	require.NotNil(t, user.Groups)
 	require.Len(t, user.Groups, 1)
 }

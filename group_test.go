@@ -22,15 +22,15 @@ func Test_Group_GetStringAttribute(t *testing.T) {
 }
 
 func Test_GetGroupRequest_Validate(t *testing.T) {
-	var req *GetGroupequest
+	var req GetGroupArgs
 	err := req.Validate()
 	require.Error(t, err)
 
-	req = &GetGroupequest{}
+	req = GetGroupArgs{}
 	err1 := req.Validate()
 	require.Error(t, err1)
 
-	req = &GetGroupequest{Id: "fake"}
+	req = GetGroupArgs{Id: "fake"}
 	errOk := req.Validate()
 	require.NoError(t, errOk)
 }
@@ -40,21 +40,21 @@ func Test_Client_GetGroup(t *testing.T) {
 	err := cl.Connect()
 	require.NoError(t, err)
 
-	var badReq *GetGroupequest
-	_, badReqErr := cl.GetGroup(badReq)
+	var badArgs GetGroupArgs
+	_, badReqErr := cl.GetGroup(badArgs)
 	require.Error(t, badReqErr)
 
-	req := &GetGroupequest{Id: "entryForErr", SkipMembersSearch: true}
-	_, err = cl.GetGroup(req)
+	args := GetGroupArgs{Id: "entryForErr", SkipMembersSearch: true}
+	_, err = cl.GetGroup(args)
 	require.Error(t, err)
 
-	req = &GetGroupequest{Id: "groupFake", SkipMembersSearch: true}
-	group, err := cl.GetGroup(req)
+	args = GetGroupArgs{Id: "groupFake", SkipMembersSearch: true}
+	group, err := cl.GetGroup(args)
 	require.NoError(t, err)
 	require.Nil(t, group)
 
 	// Too many entries error
-	group, err = cl.GetGroup(&GetGroupequest{
+	group, err = cl.GetGroup(GetGroupArgs{
 		Id:                "notUniq",
 		SkipMembersSearch: true,
 		Attributes:        []string{"sAMAccountName"},
@@ -63,36 +63,36 @@ func Test_Client_GetGroup(t *testing.T) {
 	require.Nil(t, group)
 
 	// Group with err members get
-	group, err = cl.GetGroup(&GetGroupequest{
+	group, err = cl.GetGroup(GetGroupArgs{
 		Id:                "groupWithErrMember",
 		SkipMembersSearch: false,
 	})
 	require.Error(t, err)
 	require.Nil(t, group)
 
-	dnReq := &GetGroupequest{Dn: "OU=group1,DC=company,DC=com", SkipMembersSearch: true}
-	groupByDn, err := cl.GetGroup(dnReq)
+	dnArgs := GetGroupArgs{Dn: "OU=group1,DC=company,DC=com", SkipMembersSearch: true}
+	groupByDn, err := cl.GetGroup(dnArgs)
 	require.NoError(t, err)
 	require.NotNil(t, groupByDn)
-	require.Equal(t, dnReq.Dn, groupByDn.DN)
+	require.Equal(t, dnArgs.Dn, groupByDn.DN)
 
-	req = &GetGroupequest{Id: "group1", SkipMembersSearch: true}
-	group, err = cl.GetGroup(req)
+	args = GetGroupArgs{Id: "group1", SkipMembersSearch: true}
+	group, err = cl.GetGroup(args)
 	require.NoError(t, err)
 	require.NotNil(t, group)
-	require.Equal(t, req.Id, group.Id)
+	require.Equal(t, args.Id, group.Id)
 
-	req.Attributes = []string{"something"}
-	group, err = cl.GetGroup(req)
+	args.Attributes = []string{"something"}
+	group, err = cl.GetGroup(args)
 	require.NoError(t, err)
 	require.NotNil(t, group)
-	require.Equal(t, req.Id, group.Id)
+	require.Equal(t, args.Id, group.Id)
 
-	req.SkipMembersSearch = false
-	group, err = cl.GetGroup(req)
+	args.SkipMembersSearch = false
+	group, err = cl.GetGroup(args)
 	require.NoError(t, err)
 	require.NotNil(t, group)
-	require.Equal(t, req.Id, group.Id)
+	require.Equal(t, args.Id, group.Id)
 	require.NotNil(t, group.Members)
 	require.Len(t, group.Members, 1)
 }

@@ -36,7 +36,7 @@ func (g *Group) GetStringAttribute(name string) string {
 	return ""
 }
 
-type GetGroupequest struct {
+type GetGroupArgs struct {
 	// Group ID to search.
 	Id string `json:"id"`
 	// Optional group DN. Overwrites ID if provided in request.
@@ -47,24 +47,21 @@ type GetGroupequest struct {
 	SkipMembersSearch bool `json:"skip_members_search"`
 }
 
-func (req *GetGroupequest) Validate() error {
-	if req == nil {
-		return errors.New("nil request")
-	}
-	if req.Id == "" && req.Dn == "" {
+func (args GetGroupArgs) Validate() error {
+	if args.Id == "" && args.Dn == "" {
 		return errors.New("neither of ID of DN provided")
 	}
 	return nil
 }
 
-func (cl *Client) GetGroup(r *GetGroupequest) (*Group, error) {
-	if err := r.Validate(); err != nil {
+func (cl *Client) GetGroup(args GetGroupArgs) (*Group, error) {
+	if err := args.Validate(); err != nil {
 		return nil, err
 	}
 
-	filter := fmt.Sprintf(cl.cfg.Groups.FilterById, r.Id)
-	if r.Dn != "" {
-		filter = fmt.Sprintf(cl.cfg.Groups.FilterByDn, ldap.EscapeFilter(r.Dn))
+	filter := fmt.Sprintf(cl.cfg.Groups.FilterById, args.Id)
+	if args.Dn != "" {
+		filter = fmt.Sprintf(cl.cfg.Groups.FilterByDn, ldap.EscapeFilter(args.Dn))
 	}
 
 	req := &ldap.SearchRequest{
@@ -75,8 +72,8 @@ func (cl *Client) GetGroup(r *GetGroupequest) (*Group, error) {
 		Filter:       filter,
 		Attributes:   cl.cfg.Groups.Attributes,
 	}
-	if r.Attributes != nil {
-		req.Attributes = r.Attributes
+	if args.Attributes != nil {
+		req.Attributes = args.Attributes
 	}
 
 	entry, err := cl.searchEntry(req)
@@ -96,7 +93,7 @@ func (cl *Client) GetGroup(r *GetGroupequest) (*Group, error) {
 		result.Attributes[a.Name] = entry.GetAttributeValue(a.Name)
 	}
 
-	if !r.SkipMembersSearch {
+	if !args.SkipMembersSearch {
 		members, err := cl.getGroupMembers(entry.DN)
 		if err != nil {
 			return nil, fmt.Errorf("can't get group members: %s", err.Error())
@@ -150,7 +147,7 @@ func (g *Group) MembersId() []string {
 
 // Adds provided accounts IDs to provided group members. Returns number of addedd accounts.
 func (cl *Client) AddGroupMembers(groupId string, membersIds ...string) (int, error) {
-	group, err := cl.GetGroup(&GetGroupequest{Id: groupId})
+	group, err := cl.GetGroup(GetGroupArgs{Id: groupId})
 	if err != nil {
 		return 0, fmt.Errorf("can't get group: %s", err.Error())
 	}
@@ -166,7 +163,7 @@ func (cl *Client) AddGroupMembers(groupId string, membersIds ...string) (int, er
 		wg.Add(1)
 		go func(userId string, ch chan<- string, errCh chan<- error, wg *sync.WaitGroup) {
 			defer wg.Done()
-			user, err := cl.GetUser(&GetUserRequest{Id: userId})
+			user, err := cl.GetUser(GetUserArgs{Id: userId})
 			if err != nil {
 				errCh <- fmt.Errorf("can't get account '%s': %s", userId, err.Error())
 				return
@@ -226,7 +223,7 @@ func popAddGroupMembers(g *Group, toAdd []string) []string {
 
 // Deletes provided accounts IDs from provided group members. Returns number of deleted from group members.
 func (cl *Client) DeleteGroupMembers(groupId string, membersIds ...string) (int, error) {
-	group, err := cl.GetGroup(&GetGroupequest{Id: groupId})
+	group, err := cl.GetGroup(GetGroupArgs{Id: groupId})
 	if err != nil {
 		return 0, fmt.Errorf("can't get group: %s", err.Error())
 	}
@@ -242,7 +239,7 @@ func (cl *Client) DeleteGroupMembers(groupId string, membersIds ...string) (int,
 		wg.Add(1)
 		go func(userId string, ch chan<- string, errCh chan<- error, wg *sync.WaitGroup) {
 			defer wg.Done()
-			user, err := cl.GetUser(&GetUserRequest{Id: userId})
+			user, err := cl.GetUser(GetUserArgs{Id: userId})
 			if err != nil {
 				errCh <- fmt.Errorf("can't get account '%s': %s", userId, err.Error())
 				return
