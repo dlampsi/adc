@@ -162,6 +162,37 @@ if err := cl.Connect(); err != nil {
 }
 ```
 
+Also, you can provide a custom search filter for direct searches:
+```go
+// Init client
+cl := adc.New(&adc.Config{
+    URL:         "ldaps://my.ad.site:636",
+    SearchBase:  "OU=some,DC=company,DC=com",
+    Bind: &adc.BindAccount{
+        DN:       "CN=admin,DC=company,DC=com",
+        Password: "***",
+    },
+})
+
+// Connect
+if err := cl.Connect(); err != nil {
+    // Handle error
+}
+
+// Search for a user
+user, err := cl.GetUser(adc.GetUserArgs{Filter:"(&(objectClass=person)(sAMAccountName=someID))"})
+if err != nil {
+    // Handle error
+}
+if user == nil {
+    // Handle not found
+}
+fmt.Println(user)
+```
+
+**Note** that provided `Filter` argument int `GetUserArgs` overwrites `Id` and `Dn` arguments usage.
+
+
 ### Custom logger
 
 You can specifiy custom logger for client. Logger must implement `Logger` interface. Provide logger during client init:

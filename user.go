@@ -39,6 +39,8 @@ type GetUserArgs struct {
 	Id string `json:"id"`
 	// Optional User DN. Overwrites ID if provided in request.
 	Dn string `json:"dn"`
+	// Optional LDAP filter to search entry. Warning! provided Filter arg overwrites Id and Dn args usage.
+	Filter string `json:"filter"`
 	// Optional user attributes to overwrite attributes in client config.
 	Attributes []string `json:"attributes"`
 	// Skip search of user groups data. Can improve request time.
@@ -46,8 +48,8 @@ type GetUserArgs struct {
 }
 
 func (args GetUserArgs) Validate() error {
-	if args.Id == "" && args.Dn == "" {
-		return errors.New("neither of ID of DN provided")
+	if args.Id == "" && args.Dn == "" && args.Filter == "" {
+		return errors.New("neither of ID, DN or Filter provided")
 	}
 	return nil
 }
@@ -57,9 +59,14 @@ func (cl *Client) GetUser(args GetUserArgs) (*User, error) {
 		return nil, err
 	}
 
-	filter := fmt.Sprintf(cl.cfg.Users.FilterById, args.Id)
-	if args.Dn != "" {
-		filter = fmt.Sprintf(cl.cfg.Users.FilterByDn, ldap.EscapeFilter(args.Dn))
+	var filter string
+	if args.Filter != "" {
+		filter = args.Filter
+	} else {
+		filter = fmt.Sprintf(cl.cfg.Users.FilterById, args.Id)
+		if args.Dn != "" {
+			filter = fmt.Sprintf(cl.cfg.Users.FilterByDn, ldap.EscapeFilter(args.Dn))
+		}
 	}
 
 	req := &ldap.SearchRequest{
