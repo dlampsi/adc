@@ -33,6 +33,14 @@ func Test_GetGroupRequest_Validate(t *testing.T) {
 	req = GetGroupArgs{Id: "fake"}
 	errOk := req.Validate()
 	require.NoError(t, errOk)
+
+	req = GetGroupArgs{Filter: "fake"}
+	errOk = req.Validate()
+	require.NoError(t, errOk)
+
+	req = GetGroupArgs{Dn: "fake"}
+	errOk = req.Validate()
+	require.NoError(t, errOk)
 }
 
 func Test_Client_GetGroup(t *testing.T) {
@@ -75,6 +83,12 @@ func Test_Client_GetGroup(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, groupByDn)
 	require.Equal(t, dnArgs.Dn, groupByDn.DN)
+
+	filterReq := GetGroupArgs{Filter: "customFilterToSearchGroup", SkipMembersSearch: true}
+	userByFilter, err := cl.GetGroup(filterReq)
+	require.NoError(t, err)
+	require.NotNil(t, userByFilter)
+	require.Equal(t, userByFilter.Id, "group1")
 
 	args = GetGroupArgs{Id: "group1", SkipMembersSearch: true}
 	group, err = cl.GetGroup(args)

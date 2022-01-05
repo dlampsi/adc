@@ -33,6 +33,14 @@ func Test_GetUserArgs_Validate(t *testing.T) {
 	req = GetUserArgs{Id: "fake"}
 	errOk := req.Validate()
 	require.NoError(t, errOk)
+
+	req = GetUserArgs{Filter: "fake"}
+	errOk = req.Validate()
+	require.NoError(t, errOk)
+
+	req = GetUserArgs{Dn: "fake"}
+	errOk = req.Validate()
+	require.NoError(t, errOk)
 }
 
 func Test_Client_GetUser(t *testing.T) {
@@ -63,10 +71,16 @@ func Test_Client_GetUser(t *testing.T) {
 	require.Nil(t, user)
 
 	dnReq := GetUserArgs{Dn: "OU=user1,DC=company,DC=com", SkipGroupsSearch: true}
-	groupByDn, err := cl.GetUser(dnReq)
+	userByDn, err := cl.GetUser(dnReq)
 	require.NoError(t, err)
-	require.NotNil(t, groupByDn)
-	require.Equal(t, dnReq.Dn, groupByDn.DN)
+	require.NotNil(t, userByDn)
+	require.Equal(t, dnReq.Dn, userByDn.DN)
+
+	filterReq := GetUserArgs{Filter: "customFilterToSearchUser", SkipGroupsSearch: true}
+	userByFilter, err := cl.GetUser(filterReq)
+	require.NoError(t, err)
+	require.NotNil(t, userByFilter)
+	require.Equal(t, userByFilter.Id, "user1")
 
 	args = GetUserArgs{Id: "user1", SkipGroupsSearch: true}
 	user, err = cl.GetUser(args)
