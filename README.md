@@ -6,7 +6,7 @@
 
 Active Directory client library.
 
-The library is a wrapper around  [go-ldap/ldap](github.com/go-ldap/ldap) module that provides a more convient client for Active Directory.
+The library is a wrapper around  [go-ldap/ldap](https://github.com/go-ldap/ldap) module that provides a more convient client for Active Directory.
 
 ## Usage
 
