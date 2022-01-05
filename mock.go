@@ -179,6 +179,10 @@ func (cl *mockClient) StartTLS(*tls.Config) error {
 
 func (cl *mockClient) Close() {}
 
+func (cl *mockClient) IsClosing() bool {
+	return false
+}
+
 func (cl *mockClient) SetTimeout(time.Duration) {}
 
 var (
@@ -230,6 +234,10 @@ func (cl *mockClient) Modify(req *ldap.ModifyRequest) error {
 
 func (cl *mockClient) ModifyDN(*ldap.ModifyDNRequest) error {
 	return nil
+}
+
+func (cl *mockClient) ModifyWithResult(*ldap.ModifyRequest) (*ldap.ModifyResult, error) {
+	return nil, nil
 }
 
 func (cl *mockClient) Compare(dn, attribute, value string) (bool, error) {
