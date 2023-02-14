@@ -187,6 +187,10 @@ func (cl *mockClient) IsClosing() bool {
 
 func (cl *mockClient) SetTimeout(time.Duration) {}
 
+func (cl *mockClient) TLSConnectionState() (tls.ConnectionState, bool) {
+	return tls.ConnectionState{}, true
+}
+
 var (
 	validMockBind     = &BindAccount{DN: "validUser", Password: "validPass"}
 	invalidMockBind   = &BindAccount{DN: "mrError", Password: "mrErrorPass"}
@@ -212,6 +216,14 @@ func (cl *mockClient) SimpleBind(*ldap.SimpleBindRequest) (*ldap.SimpleBindResul
 }
 
 func (cl *mockClient) ExternalBind() error {
+	return nil
+}
+
+func (cl *mockClient) NTLMUnauthenticatedBind(domain, username string) error {
+	return nil
+}
+
+func (cl *mockClient) Unbind() error {
 	return nil
 }
 
