@@ -105,10 +105,11 @@ func (cl *Client) dial() (ldap.Client, error) {
 }
 
 // Closes connection to AD.
-func (cl *Client) Disconnect() {
-	if cl.ldapCl != nil {
-		cl.ldapCl.Close()
+func (cl *Client) Disconnect() error {
+	if cl.ldapCl == nil {
+		return nil
 	}
+	return cl.ldapCl.Close()
 }
 
 // Checks connections to AD and tries to reconnect if the connection is lost.
@@ -144,7 +145,11 @@ func (cl *Client) Reconnect(ctx context.Context, tickerDuration time.Duration, m
 			}
 			attempt++
 			cl.logger.Debugf("Reconnecting to AD server. Attempt: %d", attempt)
-			cl.Disconnect()
+
+			if err := cl.Disconnect(); err != nil {
+				return fmt.Errorf("failed to disconnect from the server: %w", err)
+			}
+
 			if err := cl.Connect(); err == nil {
 				cl.logger.Debug("Successfully reconneted to AD server")
 				return nil

@@ -179,7 +179,9 @@ func (cl *mockClient) StartTLS(*tls.Config) error {
 	return nil
 }
 
-func (cl *mockClient) Close() {}
+func (cl *mockClient) Close() error { return nil }
+
+func (cl *mockClient) GetLastError() error { return nil }
 
 func (cl *mockClient) IsClosing() bool {
 	return false
@@ -272,4 +274,8 @@ func (cl *mockClient) Search(req *ldap.SearchRequest) (*ldap.SearchResult, error
 
 func (cl *mockClient) SearchWithPaging(searchRequest *ldap.SearchRequest, pagingSize uint32) (*ldap.SearchResult, error) {
 	return nil, nil
+}
+
+func (cl *mockClient) DirSync(searchRequest *ldap.SearchRequest, flags, maxAttrCount int64, cookie []byte) (*ldap.SearchResult, error) {
+	return &ldap.SearchResult{}, nil
 }
