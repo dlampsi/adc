@@ -42,7 +42,7 @@ func Test_Client_Connect(t *testing.T) {
 
 	err := cl.Connect()
 	require.NoError(t, err)
-	cl.Disconnect()
+	require.NoError(t, cl.Disconnect())
 
 	cfg := &Config{
 		Bind: &BindAccount{DN: "fakeone", Password: "fake"},
