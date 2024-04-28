@@ -32,7 +32,7 @@ func New(cfg *Config, opts ...Option) *Client {
 			Users:   DefaultUsersConfigs(),
 			Groups:  DefaultGroupsConfigs(),
 		},
-		logger: &nopLogger{},
+		logger: newNopLogger(),
 	}
 
 	// Apply options
@@ -44,12 +44,6 @@ func New(cfg *Config, opts ...Option) *Client {
 	cl.popConfig(cfg)
 
 	return cl
-}
-
-// Client logger interface.
-type Logger interface {
-	Debug(args ...interface{})
-	Debugf(template string, args ...interface{})
 }
 
 type Option func(*Client)

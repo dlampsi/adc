@@ -159,12 +159,6 @@ func (me mockEntries) getEntriesByFilter(filter string) ([]*ldap.Entry, error) {
 	return result, nil
 }
 
-// Dummy not operational logger.
-type nopLogger struct{}
-
-func (l *nopLogger) Debug(args ...interface{})                   {}
-func (l *nopLogger) Debugf(template string, args ...interface{}) {}
-
 // Mock client. Implements ldap client interface.
 type mockClient struct {
 }
