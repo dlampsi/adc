@@ -1,2 +1,12 @@
+coverage:
+  precision: 2
+  round: up
+  range: "70...100"
+  status:
+    project:
+      default:
+        target: '80%'
+        flags:
+          - unit
 ignore:
   - "mock.go"
