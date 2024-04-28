@@ -12,10 +12,6 @@ import (
 	"github.com/go-ldap/ldap/v3"
 )
 
-const (
-	defaultClientTimeout = 10 * time.Second
-)
-
 // Active Direcotry client.
 type Client struct {
 	cfg     *Config
@@ -27,22 +23,12 @@ type Client struct {
 // Creates new client and populate provided config and options.
 func New(cfg *Config, opts ...Option) *Client {
 	cl := &Client{
-		cfg: &Config{
-			Timeout: defaultClientTimeout,
-			Users:   DefaultUsersConfigs(),
-			Groups:  DefaultGroupsConfigs(),
-		},
+		cfg:    populateConfig(cfg),
 		logger: newNopLogger(),
 	}
-
-	// Apply options
 	for _, opt := range opts {
 		opt(cl)
 	}
-
-	// Populate optional config
-	cl.popConfig(cfg)
-
 	return cl
 }
 
