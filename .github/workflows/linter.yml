@@ -1,0 +1,31 @@
+name: Linter
+on:
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - README.md
+      - LICENSE
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - README.md
+      - LICENSE
+jobs:
+  golangci-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.19
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Linter
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.54
+          args: --timeout 3m
