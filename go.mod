@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/dlampsi/generigo v1.6.0
 	github.com/go-ldap/ldap/v3 v3.4.5
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.9.0
 )
 
 require (
