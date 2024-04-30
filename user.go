@@ -63,19 +63,19 @@ func (cl *Client) GetUser(args GetUserArgs) (*User, error) {
 	if args.Filter != "" {
 		filter = args.Filter
 	} else {
-		filter = fmt.Sprintf(cl.cfg.Users.FilterById, args.Id)
+		filter = fmt.Sprintf(cl.Config.Users.FilterById, args.Id)
 		if args.Dn != "" {
-			filter = fmt.Sprintf(cl.cfg.Users.FilterByDn, ldap.EscapeFilter(args.Dn))
+			filter = fmt.Sprintf(cl.Config.Users.FilterByDn, ldap.EscapeFilter(args.Dn))
 		}
 	}
 
 	req := &ldap.SearchRequest{
-		BaseDN:       cl.cfg.Users.SearchBase,
+		BaseDN:       cl.Config.Users.SearchBase,
 		Scope:        ldap.ScopeWholeSubtree,
 		DerefAliases: ldap.NeverDerefAliases,
-		TimeLimit:    int(cl.cfg.Timeout.Seconds()),
+		TimeLimit:    int(cl.Config.Timeout.Seconds()),
 		Filter:       filter,
-		Attributes:   cl.cfg.Users.Attributes,
+		Attributes:   cl.Config.Users.Attributes,
 	}
 	if args.Attributes != nil {
 		req.Attributes = args.Attributes
@@ -91,7 +91,7 @@ func (cl *Client) GetUser(args GetUserArgs) (*User, error) {
 
 	result := &User{
 		DN:         entry.DN,
-		Id:         entry.GetAttributeValue(cl.cfg.Users.IdAttribute),
+		Id:         entry.GetAttributeValue(cl.Config.Users.IdAttribute),
 		Attributes: make(map[string]interface{}, len(entry.Attributes)),
 	}
 	for _, a := range entry.Attributes {
@@ -111,12 +111,12 @@ func (cl *Client) GetUser(args GetUserArgs) (*User, error) {
 
 func (cl *Client) getUserGroups(dn string) ([]UserGroup, error) {
 	req := &ldap.SearchRequest{
-		BaseDN:       cl.cfg.Groups.SearchBase,
+		BaseDN:       cl.Config.Groups.SearchBase,
 		Scope:        ldap.ScopeWholeSubtree,
 		DerefAliases: ldap.NeverDerefAliases,
-		TimeLimit:    int(cl.cfg.Timeout.Seconds()),
-		Filter:       fmt.Sprintf(cl.cfg.Users.FilterGroupsByDn, ldap.EscapeFilter(dn)),
-		Attributes:   []string{cl.cfg.Groups.IdAttribute},
+		TimeLimit:    int(cl.Config.Timeout.Seconds()),
+		Filter:       fmt.Sprintf(cl.Config.Users.FilterGroupsByDn, ldap.EscapeFilter(dn)),
+		Attributes:   []string{cl.Config.Groups.IdAttribute},
 	}
 	entries, err := cl.searchEntries(req)
 	if err != nil {
@@ -126,7 +126,7 @@ func (cl *Client) getUserGroups(dn string) ([]UserGroup, error) {
 	for _, e := range entries {
 		result = append(result, UserGroup{
 			DN: e.DN,
-			Id: e.GetAttributeValue(cl.cfg.Groups.IdAttribute),
+			Id: e.GetAttributeValue(cl.Config.Groups.IdAttribute),
 		})
 	}
 	return result, nil

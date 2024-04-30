@@ -10,3 +10,4 @@ coverage:
           - unit
 ignore:
   - "mock.go"
+  - "logger.go"

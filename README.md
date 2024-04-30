@@ -71,18 +71,12 @@ fmt.Printf("Deleted %d users from group members", deleted)
 
 ```
 
-### Default config file
+### Custom logger
 
-By default client initializes with default config file. You can find it in [DefaultUsersConfigs()](config.go) func.
-
-### Check auth by creds
-
-Custom check authentification for provided credentials:
+You can specifiy custom logger for client. Logger must implement `Logger` interface. Provide logger during client init:
 
 ```go
-if err := cl.CheckAuthByDN("CN=user,DC=company,DC=com", "password"); err != nil {
-    // Handle bad credentials error
-}
+cl := New(cfg, adc.WithLogger(myCustomLogger))
 ```
 
 ### Custom search base
@@ -112,7 +106,7 @@ if err := cl.Connect(); err != nil {
 You can parse custom attributes to client config to fetch those attributes during users or groups fetch:
 ```go
 // Append new attributes to existsing user attributes
-cl.Config().AppendUsesAttributes("manager")
+cl.Config.AppendUsesAttributes("manager")
 
 // Search for a user
 user, err := cl.GetUser(adc.GetUserArgs{Id:"userId"})
@@ -192,16 +186,6 @@ fmt.Println(user)
 
 **Note** that provided `Filter` argument int `GetUserArgs` overwrites `Id` and `Dn` arguments usage.
 
-
-### Custom logger
-
-You can specifiy custom logger for client. Logger must implement `Logger` interface. Provide logger during client init:
-
-```go
-cl := New(cfg, adc.WithLogger(myCustomLogger))
-```
-
-
 ### Reconnect
 
 Client has reconnect method, that validates connection to server and reconnects to it with provided ticker interval and retries attempts count.
@@ -209,12 +193,10 @@ Client has reconnect method, that validates connection to server and reconnects 
 Exxample for recconect each 5 secconds with 24 retrie attempts:
 
 ```go
-err := cl.Reconnect(nctx, time.NewTicker(5*time.Second), 24)
-if err != nil {
+if err := cl.Reconnect(ctx, time.NewTicker(5*time.Second), 24); err != nil {
     // Handle error
 }
 ```
-
 
 ## Contributing
 

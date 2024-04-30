@@ -8,102 +8,130 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type testLogger struct{}
+
+func (l *testLogger) Debug(args ...interface{})                   {}
+func (l *testLogger) Debugf(template string, args ...interface{}) {}
+
 func Test_New(t *testing.T) {
-	cl := New(nil)
-	require.NotNil(t, cl)
-	require.Equal(t, cl.cfg.Timeout, defaultClientTimeout)
-	require.NotNil(t, cl.cfg.Users)
-	require.Equal(t, cl.cfg.Users, DefaultUsersConfigs())
-	require.NotNil(t, cl.cfg.Groups)
-	require.Equal(t, cl.cfg.Groups, DefaultGroupsConfigs())
-
-	cfg := &Config{Timeout: 60 * time.Second}
-	cl = New(cfg)
-	require.NotNil(t, cl)
-	require.Equal(t, cfg.Timeout, cl.Config().Timeout)
-}
-
-func Test_Config(t *testing.T) {
-	cfg := &Config{
-		Users:  DefaultUsersConfigs(),
-		Groups: DefaultGroupsConfigs(),
-	}
-	cl := New(cfg)
-	cl.Config().Users.FilterById = "(&(objectClass=group)(cn=%v))"
-	require.Equal(t, "(&(objectClass=group)(cn=%v))", cl.Config().Users.FilterById)
+	t.Run("Nil", func(t *testing.T) {
+		cl := New(nil)
+		require.NotNil(t, cl)
+		require.NotNil(t, cl.Config)
+	})
+	t.Run("WithLogger", func(t *testing.T) {
+		tlogger := &testLogger{}
+		cl := New(nil, WithLogger(tlogger))
+		require.NotNil(t, cl)
+		require.Equal(t, tlogger, cl.logger)
+	})
 }
 
 func Test_Client_Connect(t *testing.T) {
-	badCl := New(nil)
-	expErr := badCl.Connect()
-	require.Error(t, expErr)
+	t.Run("BadClient", func(t *testing.T) {
+		cl := New(nil)
+		require.Error(t, cl.Connect(), "Connection should fail without any configuration")
+	})
+	t.Run("Bindless", func(t *testing.T) {
+		cl := newMockClient(nil)
+		require.NoError(t, cl.Connect(), "Bindless connection should be successful")
+		require.NoError(t, cl.Disconnect())
+	})
+	t.Run("BindWithErr", func(t *testing.T) {
+		cl := newMockClient(&Config{
+			Bind: &BindAccount{DN: "mrError", Password: "fake"},
+		})
+		require.Error(t, cl.Connect(), "Connection should fail with bad bind credentials")
+	})
+	t.Run("BindWithSuccess", func(t *testing.T) {
+		cl := newMockClient(&Config{
+			Bind: validMockBind,
+		})
+		require.NoError(t, cl.Connect(), "Connection should be successful with valid bind credentials")
+	})
+	t.Run("WithSecureDialOpts", func(t *testing.T) {
+		cl := New(&Config{
+			URL: "ldaps://fake:636",
+		})
+		require.Error(t, cl.Connect())
+	})
+	t.Run("WithSecureDialOpts", func(t *testing.T) {
+		cl := New(&Config{
+			URL:         "ldaps://fake:636",
+			InsecureTLS: true,
+		})
+		require.Error(t, cl.Connect())
+	})
+}
 
-	cl := New(nil, withMock())
-
-	err := cl.Connect()
-	require.NoError(t, err)
-	require.NoError(t, cl.Disconnect())
-
-	cfg := &Config{
-		Bind: &BindAccount{DN: "fakeone", Password: "fake"},
-	}
-	cl = New(cfg, withMock())
-	err = cl.Connect()
-	require.Error(t, err)
-
-	cfg.Bind.DN = "mrError"
-	cl = New(cfg)
-	err = cl.Connect()
-	require.Error(t, err)
-
-	cfg.Bind.DN = "validUser"
-	cfg.Bind.Password = "badPass"
-	cl = New(cfg, withMock())
-	err = cl.Connect()
-	require.Error(t, err)
-
-	cfg.Bind.DN = "validUser"
-	cfg.Bind.Password = "validPass"
-	cl = New(cfg, withMock())
-	err = cl.Connect()
-	require.NoError(t, err)
+func Test_Client_Disconnect(t *testing.T) {
+	t.Run("WithNilLdap", func(t *testing.T) {
+		cl := newMockClient(&Config{Bind: validMockBind})
+		require.NoError(t, cl.Disconnect())
+	})
+	t.Run("Ok", func(t *testing.T) {
+		cl := newMockClient(&Config{Bind: validMockBind})
+		require.NoError(t, cl.Connect())
+		require.NoError(t, cl.Disconnect())
+	})
 }
 
 func Test_Client_Reconnect(t *testing.T) {
-	cfg := &Config{
-		Bind: validMockBind,
-	}
-	cl := New(cfg, withMock())
-	err := cl.Connect()
-	require.NoError(t, err)
+	t.Run("WithErr", func(t *testing.T) {
+		cl := newMockClient(&Config{Bind: validMockBind})
+		require.NoError(t, cl.Connect())
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+		cl.Config.Bind = &BindAccount{DN: "OU=entryForErr,DC=company,DC=com"}
+		require.Error(t, cl.Reconnect(context.TODO(), 2*time.Second, 2), "Reconnect for a bad user should fail with error")
+	})
+	t.Run("WithReconnectErr", func(t *testing.T) {
+		ctx := context.TODO()
 
-	err = cl.Reconnect(ctx, 2*time.Second, 2)
-	require.NoError(t, err)
+		cl := newMockClient(&Config{Bind: validMockBind})
+		require.NoError(t, cl.Connect())
 
-	cl.cfg.Bind = &BindAccount{DN: mockEntriesData["entryForErr"].DN}
-	err = cl.Reconnect(ctx, 2*time.Second, 2)
-	require.Error(t, err)
+		cl.Config.Bind = reconnectMockBind
 
-	cl.cfg.Bind = reconnectMockBind
-	err = cl.Reconnect(ctx, 0, 1)
-	require.Error(t, err)
-	err = cl.Reconnect(ctx, 30*time.Millisecond, 0)
-	require.Error(t, err)
-	err = cl.Reconnect(ctx, 1*time.Second, 1)
-	require.Error(t, err)
+		require.Error(t, cl.Reconnect(ctx, 0, 1))
+		require.Error(t, cl.Reconnect(ctx, 30*time.Millisecond, 0))
+		require.Error(t, cl.Reconnect(ctx, 1*time.Second, 1))
+	})
+	t.Run("WithContextCancel", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		go func() {
+			time.Sleep(10 * time.Millisecond)
+			cancel()
+		}()
 
-	nctx, cancel := context.WithCancel(context.Background())
-	go func() {
-		time.Sleep(10 * time.Millisecond)
-		cancel()
-	}()
-	err = cl.Reconnect(nctx, 5*time.Second, 1)
-	require.Error(t, err)
+		cl := newMockClient(&Config{Bind: validMockBind})
+		require.NoError(t, cl.Connect())
 
-	cl.cfg.Bind = validMockBind
-	err = cl.Reconnect(ctx, 30*time.Millisecond, 1)
-	require.NoError(t, err)
+		cl.Config.Bind = reconnectMockBind
+
+		require.Error(t, cl.Reconnect(ctx, 5*time.Second, 1))
+
+		cl.Config.Bind = validMockBind
+		require.NoError(t, cl.Reconnect(ctx, 30*time.Millisecond, 1))
+	})
+	t.Run("Ok", func(t *testing.T) {
+		ctx := context.TODO()
+
+		cl := newMockClient(&Config{Bind: validMockBind})
+
+		require.NoError(t, cl.Connect())
+		require.NoError(t, cl.Reconnect(ctx, 2*time.Second, 2), "Reconnect should be successful")
+	})
+}
+
+func Test_Client_CheckAuthByDN(t *testing.T) {
+	t.Run("WithCheckErr", func(t *testing.T) {
+		cl := newMockClient(&Config{Bind: validMockBind})
+		require.NoError(t, cl.Connect())
+		require.Error(t, cl.CheckAuthByDN("OU=entryForErr,DC=company,DC=com", "fake"))
+	})
+	t.Run("Ok", func(t *testing.T) {
+		cl := newMockClient(&Config{Bind: validMockBind})
+		require.NoError(t, cl.Connect())
+		require.NoError(t, cl.CheckAuthByDN(validMockBind.DN, validMockBind.Password))
+	})
 }

@@ -64,19 +64,19 @@ func (cl *Client) GetGroup(args GetGroupArgs) (*Group, error) {
 	if args.Filter != "" {
 		filter = args.Filter
 	} else {
-		filter = fmt.Sprintf(cl.cfg.Groups.FilterById, args.Id)
+		filter = fmt.Sprintf(cl.Config.Groups.FilterById, args.Id)
 		if args.Dn != "" {
-			filter = fmt.Sprintf(cl.cfg.Groups.FilterByDn, ldap.EscapeFilter(args.Dn))
+			filter = fmt.Sprintf(cl.Config.Groups.FilterByDn, ldap.EscapeFilter(args.Dn))
 		}
 	}
 
 	req := &ldap.SearchRequest{
-		BaseDN:       cl.cfg.Groups.SearchBase,
+		BaseDN:       cl.Config.Groups.SearchBase,
 		Scope:        ldap.ScopeWholeSubtree,
 		DerefAliases: ldap.NeverDerefAliases,
-		TimeLimit:    int(cl.cfg.Timeout.Seconds()),
+		TimeLimit:    int(cl.Config.Timeout.Seconds()),
 		Filter:       filter,
-		Attributes:   cl.cfg.Groups.Attributes,
+		Attributes:   cl.Config.Groups.Attributes,
 	}
 	if args.Attributes != nil {
 		req.Attributes = args.Attributes
@@ -92,7 +92,7 @@ func (cl *Client) GetGroup(args GetGroupArgs) (*Group, error) {
 
 	result := &Group{
 		DN:         entry.DN,
-		Id:         entry.GetAttributeValue(cl.cfg.Groups.IdAttribute),
+		Id:         entry.GetAttributeValue(cl.Config.Groups.IdAttribute),
 		Attributes: make(map[string]interface{}, len(entry.Attributes)),
 	}
 	for _, a := range entry.Attributes {
@@ -112,12 +112,12 @@ func (cl *Client) GetGroup(args GetGroupArgs) (*Group, error) {
 
 func (cl *Client) getGroupMembers(dn string) ([]GroupMember, error) {
 	req := &ldap.SearchRequest{
-		BaseDN:       cl.cfg.Users.SearchBase,
+		BaseDN:       cl.Config.Users.SearchBase,
 		Scope:        ldap.ScopeWholeSubtree,
 		DerefAliases: ldap.NeverDerefAliases,
-		TimeLimit:    int(cl.cfg.Timeout.Seconds()),
-		Filter:       fmt.Sprintf(cl.cfg.Groups.FilterMembersByDn, ldap.EscapeFilter(dn)),
-		Attributes:   []string{cl.cfg.Users.IdAttribute},
+		TimeLimit:    int(cl.Config.Timeout.Seconds()),
+		Filter:       fmt.Sprintf(cl.Config.Groups.FilterMembersByDn, ldap.EscapeFilter(dn)),
+		Attributes:   []string{cl.Config.Users.IdAttribute},
 	}
 	entries, err := cl.searchEntries(req)
 	if err != nil {
@@ -127,7 +127,7 @@ func (cl *Client) getGroupMembers(dn string) ([]GroupMember, error) {
 	for _, e := range entries {
 		result = append(result, GroupMember{
 			DN: e.DN,
-			Id: e.GetAttributeValue(cl.cfg.Groups.IdAttribute),
+			Id: e.GetAttributeValue(cl.Config.Groups.IdAttribute),
 		})
 	}
 	return result, nil

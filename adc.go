@@ -12,44 +12,24 @@ import (
 	"github.com/go-ldap/ldap/v3"
 )
 
-const (
-	defaultClientTimeout = 10 * time.Second
-)
-
 // Active Direcotry client.
 type Client struct {
-	cfg     *Config
-	ldapCl  ldap.Client
-	logger  Logger
-	useMock bool
+	Config   *Config
+	ldap     ldap.Client
+	logger   Logger
+	mockMode bool
 }
 
 // Creates new client and populate provided config and options.
 func New(cfg *Config, opts ...Option) *Client {
 	cl := &Client{
-		cfg: &Config{
-			Timeout: defaultClientTimeout,
-			Users:   DefaultUsersConfigs(),
-			Groups:  DefaultGroupsConfigs(),
-		},
-		logger: &nopLogger{},
+		Config: populateConfig(cfg),
+		logger: newNopLogger(),
 	}
-
-	// Apply options
 	for _, opt := range opts {
 		opt(cl)
 	}
-
-	// Populate optional config
-	cl.popConfig(cfg)
-
 	return cl
-}
-
-// Client logger interface.
-type Logger interface {
-	Debug(args ...interface{})
-	Debugf(template string, args ...interface{})
 }
 
 type Option func(*Client)
@@ -59,68 +39,55 @@ func WithLogger(l Logger) Option {
 	return func(cl *Client) { cl.logger = l }
 }
 
-// Enables mock ldap interface for client
-func withMock() Option {
-	return func(cl *Client) { cl.useMock = true }
-}
-
-func (cl *Client) Config() *Config {
-	return cl.cfg
-}
-
 // Connects to AD server and store connection into client.
 func (cl *Client) Connect() error {
-	conn, err := cl.connect(cl.cfg.Bind)
+	conn, err := cl.connect()
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to connect: %w", err)
 	}
-	cl.ldapCl = conn
+
+	if cl.Config.Bind != nil {
+		if err := conn.Bind(cl.Config.Bind.DN, cl.Config.Bind.Password); err != nil {
+			return fmt.Errorf("Failed to bind: %w", err)
+		}
+	}
+
+	cl.ldap = conn
+
 	return nil
 }
 
-// Connects and bind to LDAP server by provided bind account.
-func (cl *Client) connect(bind *BindAccount) (ldap.Client, error) {
-	conn, err := cl.dial()
-	if err != nil {
-		return nil, err
+func (cl *Client) connect() (ldap.Client, error) {
+	if cl.mockMode {
+		return mockConnection()
 	}
-	if bind != nil {
-		if err := conn.Bind(bind.DN, bind.Password); err != nil {
-			return nil, err
-		}
-	}
-	return conn, nil
-}
 
-// Dials ldap server provided in client configuration.
-func (cl *Client) dial() (ldap.Client, error) {
-	if cl.useMock {
-		return &mockClient{}, nil
+	var dialOpts []ldap.DialOpt
+	if strings.HasPrefix(cl.Config.URL, "ldaps://") {
+		dialOpts = append(
+			dialOpts, ldap.DialWithTLSConfig(&tls.Config{InsecureSkipVerify: cl.Config.InsecureTLS}),
+		)
 	}
-	var opts []ldap.DialOpt
-	if strings.HasPrefix(cl.cfg.URL, "ldaps://") {
-		opts = append(opts, ldap.DialWithTLSConfig(&tls.Config{InsecureSkipVerify: cl.cfg.InsecureTLS}))
-	}
-	return ldap.DialURL(cl.cfg.URL, opts...)
+	return ldap.DialURL(cl.Config.URL, dialOpts...)
 }
 
 // Closes connection to AD.
 func (cl *Client) Disconnect() error {
-	if cl.ldapCl == nil {
+	if cl.ldap == nil {
 		return nil
 	}
-	return cl.ldapCl.Close()
+	return cl.ldap.Close()
 }
 
 // Checks connections to AD and tries to reconnect if the connection is lost.
 func (cl *Client) Reconnect(ctx context.Context, tickerDuration time.Duration, maxAttempts int) error {
 	_, connErr := cl.searchEntry(&ldap.SearchRequest{
-		BaseDN:       cl.cfg.SearchBase,
+		BaseDN:       cl.Config.SearchBase,
 		Scope:        ldap.ScopeWholeSubtree,
 		DerefAliases: ldap.NeverDerefAliases,
-		TimeLimit:    int(cl.cfg.Timeout.Seconds()),
-		Filter:       fmt.Sprintf(cl.cfg.Users.FilterByDn, ldap.EscapeFilter(cl.cfg.Bind.DN)),
-		Attributes:   []string{cl.cfg.Users.IdAttribute},
+		TimeLimit:    int(cl.Config.Timeout.Seconds()),
+		Filter:       fmt.Sprintf(cl.Config.Users.FilterByDn, ldap.EscapeFilter(cl.Config.Bind.DN)),
+		Attributes:   []string{cl.Config.Users.IdAttribute},
 	})
 	if connErr == nil {
 		return nil
@@ -164,7 +131,7 @@ func (cl *Client) Reconnect(ctx context.Context, tickerDuration time.Duration, m
 // Returns nil if no entries found.
 // Returns 'ErrTooManyEntriesFound' error if entries more that one.
 func (cl *Client) searchEntry(req *ldap.SearchRequest) (*ldap.Entry, error) {
-	result, err := cl.ldapCl.Search(req)
+	result, err := cl.ldap.Search(req)
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +146,7 @@ func (cl *Client) searchEntry(req *ldap.SearchRequest) (*ldap.Entry, error) {
 
 // SearchEntries Perfroms search for ldap entries.
 func (cl *Client) searchEntries(req *ldap.SearchRequest) ([]*ldap.Entry, error) {
-	result, err := cl.ldapCl.Search(req)
+	result, err := cl.ldap.Search(req)
 	if err != nil {
 		return nil, err
 	}
@@ -190,12 +157,13 @@ func (cl *Client) searchEntries(req *ldap.SearchRequest) ([]*ldap.Entry, error) 
 func (cl *Client) updateAttribute(dn string, attribute string, values []string) error {
 	mr := ldap.NewModifyRequest(dn, nil)
 	mr.Replace(attribute, values)
-	return cl.ldapCl.Modify(mr)
+	return cl.ldap.Modify(mr)
 }
 
 // Tries to authorise in AcitveDirecotry by provided DN and password and return error if failed.
+// Use this method to check if user can be authenticated in AD.
 func (cl *Client) CheckAuthByDN(dn, password string) error {
-	conn, err := cl.dial()
+	conn, err := cl.connect()
 	if err != nil {
 		return err
 	}

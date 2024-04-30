@@ -1,7 +1,6 @@
 package adc
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -45,17 +44,6 @@ type UsersConfigs struct {
 	FilterGroupsByDn string `json:"filter_groups_by_dn"`
 }
 
-func DefaultUsersConfigs() *UsersConfigs {
-	const defaultIdAttribute = "sAMAccountName"
-	return &UsersConfigs{
-		IdAttribute:      defaultIdAttribute,
-		Attributes:       []string{defaultIdAttribute, "givenName", "sn", "mail"},
-		FilterById:       fmt.Sprintf("(&(objectClass=person)(%s=%%v))", defaultIdAttribute),
-		FilterByDn:       "(&(objectClass=person)(distinguishedName=%v))",
-		FilterGroupsByDn: "(&(objectClass=group)(member=%v))",
-	}
-}
-
 type GroupsConfigs struct {
 	// The ID attribute name for group.
 	IdAttribute string `json:"id_attribute"`
@@ -71,17 +59,6 @@ type GroupsConfigs struct {
 	FilterMembersByDn string `json:"filter_members_by_dn"`
 }
 
-func DefaultGroupsConfigs() *GroupsConfigs {
-	const defaultIdAttribute = "sAMAccountName"
-	return &GroupsConfigs{
-		IdAttribute:       defaultIdAttribute,
-		Attributes:        []string{defaultIdAttribute, "cn", "description"},
-		FilterById:        fmt.Sprintf("(&(objectClass=group)(%s=%%v))", defaultIdAttribute),
-		FilterByDn:        "(&(objectClass=group)(distinguishedName=%v))",
-		FilterMembersByDn: "(&(objectCategory=person)(memberOf=%v))",
-	}
-}
-
 // Appends attributes to params in client config file.
 func (cfg *Config) AppendUsesAttributes(attrs ...string) {
 	cfg.Users.Attributes = append(cfg.Users.Attributes, attrs...)
@@ -92,60 +69,79 @@ func (cfg *Config) AppendGroupsAttributes(attrs ...string) {
 	cfg.Groups.Attributes = append(cfg.Groups.Attributes, attrs...)
 }
 
-// Populates client config by provided config struct.
-func (cl *Client) popConfig(cfg *Config) {
+func getDefaultConfig() *Config {
+	return &Config{
+		Timeout: 10 * time.Second,
+		Users: &UsersConfigs{
+			IdAttribute:      "sAMAccountName",
+			Attributes:       []string{"sAMAccountName", "givenName", "sn", "mail"},
+			FilterById:       "(&(objectClass=person)(sAMAccountName=%v))",
+			FilterByDn:       "(&(objectClass=person)(distinguishedName=%v))",
+			FilterGroupsByDn: "(&(objectClass=group)(member=%v))",
+		},
+		Groups: &GroupsConfigs{
+			IdAttribute:       "sAMAccountName",
+			Attributes:        []string{"sAMAccountName", "cn", "description"},
+			FilterById:        "(&(objectClass=group)(sAMAccountName=%v))",
+			FilterByDn:        "(&(objectClass=group)(distinguishedName=%v))",
+			FilterMembersByDn: "(&(objectCategory=person)(memberOf=%v))",
+		},
+	}
+}
+
+func populateConfig(cfg *Config) *Config {
+	result := getDefaultConfig()
+
 	if cfg == nil {
-		return
-	}
-	if cfg.URL != "" {
-		cl.cfg.URL = cfg.URL
-	}
-	cl.cfg.InsecureTLS = cfg.InsecureTLS
-	if cfg.Timeout != 0 {
-		cl.cfg.Timeout = cfg.Timeout
-	}
-	if cfg.SearchBase != "" {
-		cl.cfg.SearchBase = cfg.SearchBase
-	}
-	if cfg.Bind != nil {
-		cl.cfg.Bind = cfg.Bind
+		return result
 	}
 
-	cl.cfg.Users.SearchBase = cl.cfg.SearchBase
-	cl.cfg.Groups.SearchBase = cl.cfg.SearchBase
+	result.URL = cfg.URL
+	result.InsecureTLS = cfg.InsecureTLS
+	result.SearchBase = cfg.SearchBase
+	result.Bind = cfg.Bind
+
+	if cfg.Timeout != 0 {
+		result.Timeout = cfg.Timeout
+	}
 
 	if cfg.Users != nil {
-		if cfg.Users.Attributes != nil {
-			cl.cfg.Users.Attributes = cfg.Users.Attributes
+		result.Users.SearchBase = cfg.Users.SearchBase
+		if len(cfg.Users.Attributes) > 0 {
+			result.Users.Attributes = cfg.Users.Attributes
 		}
-		if cfg.Users.SearchBase != "" {
-			cl.cfg.Users.SearchBase = cfg.Users.SearchBase
+		if cfg.Users.IdAttribute != "" {
+			result.Users.IdAttribute = cfg.Users.IdAttribute
 		}
 		if cfg.Users.FilterById != "" {
-			cl.cfg.Users.FilterById = cfg.Users.FilterById
+			result.Users.FilterById = cfg.Users.FilterById
 		}
 		if cfg.Users.FilterByDn != "" {
-			cl.cfg.Users.FilterByDn = cfg.Users.FilterByDn
+			result.Users.FilterByDn = cfg.Users.FilterByDn
 		}
 		if cfg.Users.FilterGroupsByDn != "" {
-			cl.cfg.Users.FilterGroupsByDn = cfg.Users.FilterGroupsByDn
+			result.Users.FilterGroupsByDn = cfg.Users.FilterGroupsByDn
 		}
 	}
+
 	if cfg.Groups != nil {
-		if cfg.Groups.Attributes != nil {
-			cl.cfg.Groups.Attributes = cfg.Groups.Attributes
+		result.Groups.SearchBase = cfg.Groups.SearchBase
+		if len(cfg.Groups.Attributes) > 0 {
+			result.Groups.Attributes = cfg.Groups.Attributes
 		}
-		if cfg.Groups.SearchBase != "" {
-			cl.cfg.Groups.SearchBase = cfg.Groups.SearchBase
+		if cfg.Groups.IdAttribute != "" {
+			result.Groups.IdAttribute = cfg.Groups.IdAttribute
 		}
 		if cfg.Groups.FilterById != "" {
-			cl.cfg.Groups.FilterById = cfg.Groups.FilterById
+			result.Groups.FilterById = cfg.Groups.FilterById
 		}
 		if cfg.Groups.FilterByDn != "" {
-			cl.cfg.Groups.FilterByDn = cfg.Groups.FilterByDn
+			result.Groups.FilterByDn = cfg.Groups.FilterByDn
 		}
 		if cfg.Groups.FilterMembersByDn != "" {
-			cl.cfg.Groups.FilterMembersByDn = cfg.Groups.FilterMembersByDn
+			result.Groups.FilterMembersByDn = cfg.Groups.FilterMembersByDn
 		}
 	}
+
+	return result
 }
