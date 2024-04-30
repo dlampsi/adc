@@ -3,9 +3,9 @@ package adc
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"sync"
 
-	"github.com/dlampsi/generigo"
 	"github.com/go-ldap/ldap/v3"
 )
 
@@ -296,7 +296,7 @@ func (cl *Client) DeleteGroupMembers(groupId string, membersIds ...string) (int,
 func popDelGroupMembers(g *Group, toDel []string) []string {
 	result := []string{}
 	for _, memberDN := range g.MembersDn() {
-		if !generigo.StringInSlice(memberDN, toDel) {
+		if !slices.Contains(toDel, memberDN) {
 			result = append(result, memberDN)
 		}
 	}

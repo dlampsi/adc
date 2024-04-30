@@ -4,9 +4,9 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"slices"
 	"time"
 
-	"github.com/dlampsi/generigo"
 	"github.com/go-ldap/ldap/v3"
 )
 
@@ -165,7 +165,7 @@ func (cl *mockClient) getEntriesByFilter(filter string) ([]*ldap.Entry, error) {
 	var result []*ldap.Entry
 	for id, entry := range cl.entries {
 		filters := entry.GetAttributeValues(mockFiltersAttribute)
-		if generigo.StringInSlice(filter, filters) {
+		if slices.Contains(filters, filter) {
 			if id == "entryForErr" {
 				return nil, errors.New("error for tests")
 			}
