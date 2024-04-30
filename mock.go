@@ -1,6 +1,7 @@
 package adc
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"time"
@@ -258,10 +259,22 @@ func (cl *mockClient) Search(req *ldap.SearchRequest) (*ldap.SearchResult, error
 	return &ldap.SearchResult{Entries: entries}, nil
 }
 
+func (cl *mockClient) SearchAsync(ctx context.Context, searchRequest *ldap.SearchRequest, bufferSize int) ldap.Response {
+	return nil
+}
+
 func (cl *mockClient) SearchWithPaging(searchRequest *ldap.SearchRequest, pagingSize uint32) (*ldap.SearchResult, error) {
 	return nil, nil
 }
 
 func (cl *mockClient) DirSync(searchRequest *ldap.SearchRequest, flags, maxAttrCount int64, cookie []byte) (*ldap.SearchResult, error) {
 	return &ldap.SearchResult{}, nil
+}
+
+func (cl *mockClient) DirSyncAsync(ctx context.Context, searchRequest *ldap.SearchRequest, bufferSize int, flags, maxAttrCount int64, cookie []byte) ldap.Response {
+	return nil
+}
+
+func (cl *mockClient) Syncrepl(ctx context.Context, searchRequest *ldap.SearchRequest, bufferSize int, mode ldap.ControlSyncRequestMode, cookie []byte, reloadHint bool) ldap.Response {
+	return nil
 }
