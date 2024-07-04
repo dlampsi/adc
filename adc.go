@@ -14,10 +14,9 @@ import (
 
 // Active Direcotry client.
 type Client struct {
-	Config   *Config
-	ldap     ldap.Client
-	logger   Logger
-	mockMode bool
+	Config *Config
+	ldap   ldap.Client
+	logger Logger
 }
 
 // Creates new client and populate provided config and options.
