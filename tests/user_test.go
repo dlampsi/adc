@@ -3,6 +3,7 @@ package adctests
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/dlampsi/adc"
 	"github.com/stretchr/testify/require"
@@ -188,5 +189,68 @@ func Test_Client_GetUser(t *testing.T) {
 		require.NotNil(t, user)
 		require.Equal(t, req.Id, user.Id)
 		require.Len(t, user.Attributes, 1)
+	})
+}
+
+func Test_Client_CreateUser(t *testing.T) {
+	cfg := getClientConfig()
+	cl := adc.New(&cfg, adc.WithLogger(&logger{t: t}))
+	require.NoError(t, cl.Connect())
+
+	t.Run("BadArgs", func(t *testing.T) {
+		req := adc.CreateUserArgs{}
+		err := cl.CreateUser(req)
+		require.Error(t, err)
+	})
+
+	t.Run("Ok", func(t *testing.T) {
+		req := adc.CreateUserArgs{
+			Id:       "createdUser" + time.Now().Format("20060102150405"),
+			Password: "password",
+			Attributes: map[string][]string{
+				"sn": {"createdUser"},
+			},
+		}
+		err := cl.CreateUser(req)
+		require.NoError(t, err)
+
+		entry, err := cl.GetUser(adc.GetUserArgs{Id: req.Id})
+		require.NoError(t, err)
+		require.NotNil(t, entry, "Created entry should be found")
+		require.Equal(t, req.Id, entry.Id)
+		require.NotEmpty(t, entry.DN)
+		require.Equal(t, req.Attributes["sn"][0], entry.Attributes["sn"])
+		require.Len(t, entry.Groups, 0, "Created user should not be in any group")
+	})
+}
+
+func Test_Client_DeleteUser(t *testing.T) {
+	cfg := getClientConfig()
+	cl := adc.New(&cfg, adc.WithLogger(&logger{t: t}))
+	require.NoError(t, cl.Connect())
+
+	t.Run("BadUserId", func(t *testing.T) {
+		require.Error(t, cl.DeleteUser(""))
+	})
+	t.Run("NonExistsGroup", func(t *testing.T) {
+		require.NoError(t, cl.DeleteUser("nonexists"), "No error on non exists (maybe already deleted) user")
+	})
+
+	t.Run("Ok", func(t *testing.T) {
+		req := adc.CreateUserArgs{
+			Id:       "userForDelete" + time.Now().Format("20060102150405"),
+			Password: "password",
+		}
+		require.NoError(t, cl.CreateUser(req))
+
+		created, err := cl.GetUser(adc.GetUserArgs{Id: req.Id})
+		require.NoError(t, err)
+		require.NotNil(t, created)
+
+		require.NoError(t, cl.DeleteUser(req.Id))
+
+		deleted, err := cl.GetUser(adc.GetUserArgs{Id: req.Id})
+		require.NoError(t, err)
+		require.Nil(t, deleted, "Deleted group should not be found")
 	})
 }

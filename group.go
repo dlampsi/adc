@@ -302,3 +302,60 @@ func popDelGroupMembers(g *Group, toDel []string) []string {
 	}
 	return result
 }
+
+type CreateGroupArgs struct {
+	Id         string
+	Attributes map[string][]string // Additional attributes to set in the new group.
+}
+
+func (args CreateGroupArgs) Validate() error {
+	if args.Id == "" {
+		return errors.New("Group ID is required")
+	}
+	return nil
+}
+
+// Creates a new group.
+func (cl *Client) CreateGroup(args CreateGroupArgs) error {
+	if err := args.Validate(); err != nil {
+		return fmt.Errorf("Bad request: %w", err)
+	}
+
+	var attributes []ldap.Attribute
+
+	if len(args.Attributes) == 0 {
+		args.Attributes = make(map[string][]string)
+	}
+
+	// Setting up default attributes.
+	if _, ok := args.Attributes["objectClass"]; !ok {
+		args.Attributes["objectClass"] = []string{"group"}
+	}
+	if _, ok := args.Attributes["sAMAccountName"]; !ok {
+		args.Attributes["sAMAccountName"] = []string{args.Id}
+	}
+	if _, ok := args.Attributes["cn"]; !ok {
+		args.Attributes["cn"] = []string{args.Id}
+	}
+
+	for k, v := range args.Attributes {
+		attributes = append(attributes, ldap.Attribute{Type: k, Vals: v})
+	}
+
+	entryDn := fmt.Sprintf("CN=%s,%s", args.Id, cl.Config.Groups.SearchBase)
+
+	return cl.createEntry(entryDn, attributes)
+}
+
+// Deletes a group by ID.
+func (cl *Client) DeleteGroup(groupId string) error {
+	entry, err := cl.GetGroup(GetGroupArgs{Id: groupId})
+	if err != nil {
+		return fmt.Errorf("Failed to get group: %w", err)
+	}
+	if entry == nil {
+		cl.logger.Debugf("Group '%s' already doesn't exist", groupId)
+		return nil
+	}
+	return cl.deleteEntry(entry.DN)
+}
