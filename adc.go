@@ -169,3 +169,18 @@ func (cl *Client) CheckAuthByDN(dn, password string) error {
 	}
 	return nil
 }
+
+func (cl *Client) createEntry(dn string, attributes []ldap.Attribute) error {
+	cl.logger.Debugf("Creating '%s'; Attributes: %#v", dn, attributes)
+
+	req := &ldap.AddRequest{
+		DN:         dn,
+		Attributes: attributes,
+	}
+	return cl.ldap.Add(req)
+}
+
+func (cl *Client) deleteEntry(dn string) error {
+	cl.logger.Debugf("Deleting: '%s'", dn)
+	return cl.ldap.Del(&ldap.DelRequest{DN: dn})
+}

@@ -2,6 +2,7 @@ package adctests
 
 import (
 	"testing"
+	"time"
 
 	"github.com/dlampsi/adc"
 	"github.com/stretchr/testify/require"
@@ -269,5 +270,63 @@ func Test_Client_DeleteGroupMembers(t *testing.T) {
 		dc, err := cl.AddGroupMembers(groupId, memberId)
 		require.NoError(t, err)
 		require.Equal(t, 1, dc)
+	})
+}
+
+func Test_Client_CreateGroup(t *testing.T) {
+	cfg := getClientConfig()
+	cl := adc.New(&cfg, adc.WithLogger(&logger{t: t}))
+	require.NoError(t, cl.Connect())
+
+	t.Run("BadArgs", func(t *testing.T) {
+		req := adc.CreateGroupArgs{}
+		require.Error(t, cl.CreateGroup(req))
+	})
+
+	t.Run("Ok", func(t *testing.T) {
+		req := adc.CreateGroupArgs{
+			Id: "createdGroup" + time.Now().Format("20060102150405"),
+			Attributes: map[string][]string{
+				"description": {"Test group 3"},
+			},
+		}
+		require.NoError(t, cl.CreateGroup(req))
+
+		group, err := cl.GetGroup(adc.GetGroupArgs{Id: req.Id})
+		require.NoError(t, err)
+		require.NotNil(t, group, "Created group should be found")
+		require.Equal(t, req.Id, group.Id)
+		require.Equal(t, req.Attributes["description"][0], group.GetStringAttribute("description"))
+		require.Len(t, group.Members, 0, "Group should have no members")
+	})
+}
+
+func Test_Client_DeleteGroup(t *testing.T) {
+	cfg := getClientConfig()
+	cl := adc.New(&cfg, adc.WithLogger(&logger{t: t}))
+	require.NoError(t, cl.Connect())
+
+	t.Run("BadGroupId", func(t *testing.T) {
+		require.Error(t, cl.DeleteGroup(""))
+	})
+	t.Run("NonExistsGroup", func(t *testing.T) {
+		require.NoError(t, cl.DeleteGroup("nonexists"), "No error on non exists (maybe already deleted) group")
+	})
+
+	t.Run("Ok", func(t *testing.T) {
+		req := adc.CreateGroupArgs{
+			Id: "groupForDelete" + time.Now().Format("20060102150405"),
+		}
+		require.NoError(t, cl.CreateGroup(req))
+
+		created, err := cl.GetGroup(adc.GetGroupArgs{Id: req.Id})
+		require.NoError(t, err)
+		require.NotNil(t, created)
+
+		require.NoError(t, cl.DeleteGroup(req.Id))
+
+		deleted, err := cl.GetGroup(adc.GetGroupArgs{Id: req.Id})
+		require.NoError(t, err)
+		require.Nil(t, deleted, "Deleted group should not be found")
 	})
 }

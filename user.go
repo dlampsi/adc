@@ -158,3 +158,67 @@ func (u *User) GroupsId() []string {
 	}
 	return result
 }
+
+type CreateUserArgs struct {
+	Id         string
+	Password   string
+	Attributes map[string][]string // Additional attributes to set in the new user.
+}
+
+func (args CreateUserArgs) Validate() error {
+	if args.Id == "" {
+		return errors.New("User ID is required")
+	}
+	if args.Password == "" {
+		return errors.New("User password is required")
+	}
+	return nil
+}
+
+// Creates a new user.
+func (cl *Client) CreateUser(args CreateUserArgs) error {
+	if err := args.Validate(); err != nil {
+		return fmt.Errorf("Bad request: %w", err)
+	}
+
+	var attributes []ldap.Attribute
+
+	if len(args.Attributes) == 0 {
+		args.Attributes = make(map[string][]string)
+	}
+
+	// Setting up default attributes.
+	if _, ok := args.Attributes["objectClass"]; !ok {
+		args.Attributes["objectClass"] = []string{"user", "person"}
+	}
+	if _, ok := args.Attributes["sAMAccountName"]; !ok {
+		args.Attributes["sAMAccountName"] = []string{args.Id}
+	}
+	if _, ok := args.Attributes["cn"]; !ok {
+		args.Attributes["cn"] = []string{args.Id}
+	}
+	if _, ok := args.Attributes["userPassword"]; !ok {
+		args.Attributes["userPassword"] = []string{args.Password}
+	}
+
+	for k, v := range args.Attributes {
+		attributes = append(attributes, ldap.Attribute{Type: k, Vals: v})
+	}
+
+	entryDn := fmt.Sprintf("CN=%s,%s", args.Id, cl.Config.Users.SearchBase)
+
+	return cl.createEntry(entryDn, attributes)
+}
+
+// Deletes an user by ID.
+func (cl *Client) DeleteUser(userId string) error {
+	entry, err := cl.GetUser(GetUserArgs{Id: userId})
+	if err != nil {
+		return fmt.Errorf("Failed to get group: %w", err)
+	}
+	if entry == nil {
+		cl.logger.Debugf("User '%s' already doesn't exist", userId)
+		return nil
+	}
+	return cl.deleteEntry(entry.DN)
+}
