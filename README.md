@@ -1,10 +1,11 @@
 # adc
 
-[![build-img]][build-url]
-[![doc-img]][doc-url]
-[![coverage-img]][coverage-url]
+[![Tests](https://github.com/dlampsi/adc/actions/workflows/tests.yml/badge.svg)](https://github.com/dlampsi/adc/actions/workflows/tests.yml)
+[![Linter](https://github.com/dlampsi/adc/actions/workflows/linter.yml/badge.svg)](https://github.com/dlampsi/adc/actions/workflows/linter.yml)
+[![codecov](https://codecov.io/gh/dlampsi/adc/graph/badge.svg?token=6TORMA0YJN)](https://codecov.io/gh/dlampsi/adc)
+[![Go Reference](https://pkg.go.dev/badge/github.com/dlampsi/adc.svg)](https://pkg.go.dev/github.com/dlampsi/adc)
 
-Active Directory client library.
+Active Directory client library that allows you to perform basic operations with users and groups: creation, deletion, search, changes to members and composition in groups.
 
 The library is a wrapper around  [go-ldap/ldap](https://github.com/go-ldap/ldap) module that provides a more convient client for Active Directory.
 
@@ -19,198 +20,34 @@ import "github.com/dlampsi/adc"
 ### Getting started
 
 ```go
-// Init client
-cl := adc.New(&adc.Config{
-    URL:         "ldaps://my.ad.site:636",
-    SearchBase:  "OU=some,DC=company,DC=com",
+cfg := &adc.Config{
+    URL: "ldaps://my.ad.site:636",
     Bind: &adc.BindAccount{
         DN:       "CN=admin,DC=company,DC=com",
         Password: "***",
     },
-})
+    SearchBase: "OU=default,DC=company,DC=com",
+}
 
-// Connect
+cl := adc.New(cfg)
+
 if err := cl.Connect(); err != nil {
     // Handle error
 }
 
-// Search for a user
-user, err := cl.GetUser(adc.GetUserArgs{Id:"userId"})
-if err != nil {
-    // Handle error
-}
-if user == nil {
-    // Handle not found
-}
-fmt.Println(user)
-
-// Search for a group
-group, err := cl.GetGroup(adc.GetGroupArgs{Id:"groupId"})
-if err != nil {
-    // Handle error
-}
-if group == nil {
-    // Handle not found
-}
-fmt.Println(group)
-
-// Add new users to group members
-added, err := cl.AddGroupMembers("groupId", "newUserId1", "newUserId2", "newUserId3")
-if err != nil {
-    // Handle error
-}
-fmt.Printf("Added %d members", added)
-
-
-// Delete users from group members
-deleted, err := cl.DeleteGroupMembers("groupId", "userId1", "userId2")
-if err != nil {
-    // Handle error
-}
-fmt.Printf("Deleted %d users from group members", deleted)
-
+// Do stuff ...
 ```
 
-### Custom logger
-
-You can specifiy custom logger for client. Logger must implement `Logger` interface. Provide logger during client init:
-
-```go
-cl := New(cfg, adc.WithLogger(myCustomLogger))
-```
-
-### Custom search base
-
-You can set custom search base for user/group in config:
-
-```go
-cfg := &adc.Config{
-    URL:         "ldaps://my.ad.site:636",
-    SearchBase:  "OU=some,DC=company,DC=com",
-    Bind: &adc.BindAccount{DN: "CN=admin,DC=company,DC=com", Password: "***"},
-    Users: &adc.UsersConfigs{
-        SearchBase: "OU=users_base,DC=company,DC=com",,
-    },
-}
-
-cl := New(cfg)
-
-if err := cl.Connect(); err != nil {
-    // Handle error
-}
-```
-
-
-### Custom entries attributes
-
-You can parse custom attributes to client config to fetch those attributes during users or groups fetch:
-```go
-// Append new attributes to existsing user attributes
-cl.Config.AppendUsesAttributes("manager")
-
-// Search for a user
-user, err := cl.GetUser(adc.GetUserArgs{Id:"userId"})
-if err != nil {
-    // Handle error
-}
-if user == nil {
-    // Handle not found
-}
-
-// Get custom attribute
-userManager := exists.GetStringAttribute("manager")
-fmt.Println(userManager)
-```
-
-Also you can parse custom attributes during each get requests:
-```go
-user, err := cl.GetUser(adc.GetUserArgs{Id: "userId", Attributes: []string{"manager"}})
-if err != nil {
-    // Handle error
-}
-// Get custom attribute
-userManager := exists.GetStringAttribute("manager")
-fmt.Println(userManager)
-```
-
-
-### Custom search filters
-
-You can parse custom search filters to client config:
-
-```go
-cfg := &adc.Config{
-    URL:         "ldaps://my.ad.site:636",
-    SearchBase:  "OU=some,DC=company,DC=com",
-    Bind: &adc.BindAccount{DN: "CN=admin,DC=company,DC=com", Password: "***"},
-    Users: &adc.UsersConfigs{
-        FilterById: "(&(objectClass=person)(cn=%v))",
-    },
-    Groups: &adc.GroupsConfigs{
-        FilterById: "(&(objectClass=group)(cn=%v))",
-    },
-}
-cl := New(cfg)
-if err := cl.Connect(); err != nil {
-    // Handle error
-}
-```
-
-Also, you can provide a custom search filter for direct searches:
-```go
-// Init client
-cl := adc.New(&adc.Config{
-    URL:         "ldaps://my.ad.site:636",
-    SearchBase:  "OU=some,DC=company,DC=com",
-    Bind: &adc.BindAccount{
-        DN:       "CN=admin,DC=company,DC=com",
-        Password: "***",
-    },
-})
-
-// Connect
-if err := cl.Connect(); err != nil {
-    // Handle error
-}
-
-// Search for a user
-user, err := cl.GetUser(adc.GetUserArgs{Filter:"(&(objectClass=person)(sAMAccountName=someID))"})
-if err != nil {
-    // Handle error
-}
-if user == nil {
-    // Handle not found
-}
-fmt.Println(user)
-```
-
-**Note** that provided `Filter` argument int `GetUserArgs` overwrites `Id` and `Dn` arguments usage.
-
-### Reconnect
-
-Client has reconnect method, that validates connection to server and reconnects to it with provided ticker interval and retries attempts count.
-
-Exxample for recconect each 5 secconds with 24 retrie attempts:
-
-```go
-if err := cl.Reconnect(ctx, time.NewTicker(5*time.Second), 24); err != nil {
-    // Handle error
-}
-```
+See [examples](examples) directory for extended usage examples.
 
 ## Contributing
 
-1. Create new PR from `main` branch
-2. Request review from maintainers
+1. Fork this repositpry
+2. Create new PR from `main` branch
+2. Create PR from your fork
+3. Make sure tests and coverage tests pass
+4. Request review
 
 ## License
 
 [MIT License](LICENSE).
-
-
-[build-img]: https://github.com/dlampsi/adc/workflows/build/badge.svg
-[build-url]: https://github.com/dlampsi/adc/actions
-[coverage-img]: https://codecov.io/gh/dlampsi/adc/branch/main/graph/badge.svg
-[coverage-url]: https://codecov.io/gh/dlampsi/adc
-[doc-img]: https://pkg.go.dev/badge/dlampsi/adc
-[doc-url]: https://pkg.go.dev/github.com/dlampsi/adc
