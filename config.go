@@ -99,6 +99,8 @@ func populateConfig(cfg *Config) *Config {
 	result.URL = cfg.URL
 	result.InsecureTLS = cfg.InsecureTLS
 	result.SearchBase = cfg.SearchBase
+	result.Users.SearchBase = cfg.SearchBase
+	result.Groups.SearchBase = cfg.SearchBase
 	result.Bind = cfg.Bind
 
 	if cfg.Timeout != 0 {

@@ -58,10 +58,6 @@ func (cl *Client) Connect() error {
 }
 
 func (cl *Client) connect() (ldap.Client, error) {
-	if cl.mockMode {
-		return mockConnection()
-	}
-
 	var dialOpts []ldap.DialOpt
 	if strings.HasPrefix(cl.Config.URL, "ldaps://") {
 		dialOpts = append(

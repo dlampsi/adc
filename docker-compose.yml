@@ -1,0 +1,15 @@
+services:
+  samba:
+    image: smblds/smblds
+    container_name: "samba"
+    restart: always
+    hostname: "ad.adc.dev"
+    ports:
+      - "636:636"
+    volumes:
+      - ./scripts/tests-init.sh:/entrypoint.d/tests-init.sh
+    environment:
+      REALM: "ADC.DEV"
+      DOMAIN: "adc.dev"
+      INSECURE_LDAPS: "true"
+      INSECURE_PASSWORDSETTINGS: "true"
