@@ -24,7 +24,7 @@ func mainCustomAttributes() {
 
 	// Append custom user attributes to all searches and get it.
 
-	cl.Config.AppendUsesAttributes("manager")
+	cl.Config.AppendUsersAttributes("manager")
 
 	user, err := cl.GetUser(adc.GetUserArgs{
 		Id: "exampleUserId",

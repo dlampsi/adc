@@ -60,7 +60,14 @@ type GroupsConfigs struct {
 }
 
 // Appends attributes to params in client config file.
+//
+// Deprecated: Use AppendUsersAttributes() instead. Will be removed soon.
 func (cfg *Config) AppendUsesAttributes(attrs ...string) {
+	cfg.AppendUsersAttributes(attrs...)
+}
+
+// Appends attributes to params in client config file.
+func (cfg *Config) AppendUsersAttributes(attrs ...string) {
 	cfg.Users.Attributes = append(cfg.Users.Attributes, attrs...)
 }
 

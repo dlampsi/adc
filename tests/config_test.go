@@ -8,17 +8,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_AppendUsesAttributes(t *testing.T) {
+func Test_AppendUsersAttributes(t *testing.T) {
 	cfg := &adc.Config{
 		Users: &adc.UsersConfigs{
 			Attributes: []string{"one"},
 		},
 	}
 
-	cfg.AppendUsesAttributes()
+	cfg.AppendUsersAttributes()
 	require.Equal(t, []string{"one"}, cfg.Users.Attributes)
 
-	cfg.AppendUsesAttributes("two")
+	cfg.AppendUsersAttributes("two")
 	require.Equal(t, []string{"one", "two"}, cfg.Users.Attributes)
 }
 
