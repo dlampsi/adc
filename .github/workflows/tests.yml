@@ -35,7 +35,7 @@ jobs:
 
       - name: Tests
         env:
-          TESTS_AD_USER_PWD: ${{ secrets.TESTS_AD_USER_PWD}}
+          TESTS_AD_USER_PWD: ${{ vars.TESTS_AD_USER_PWD}}
         run: go test -race -coverpkg=./... -coverprofile=coverage.out ./tests
 
       - name: Coverage
