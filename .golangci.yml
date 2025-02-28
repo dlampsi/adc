@@ -5,12 +5,11 @@ run:
   timeout: 1m
   issues-exit-code: 1
   tests: true
-  skip-dirs-use-default: true
-  skip-dirs: []
-  skip-files: []
 
 output:
-  formats: colored-line-number
+  formats:
+    - format: colored-line-number
+      path: stdout
   print-issued-lines: true
   print-linter-name: true
 
