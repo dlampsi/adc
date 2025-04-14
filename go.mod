@@ -1,6 +1,7 @@
 module github.com/dlampsi/adc
 
 go 1.22.5
+toolchain go1.24.1
 
 require (
 	github.com/go-ldap/ldap/v3 v3.4.10
@@ -13,6 +14,6 @@ require (
 	github.com/go-asn1-ber/asn1-ber v1.5.7 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	golang.org/x/crypto v0.31.0 // indirect
+	golang.org/x/crypto v0.35.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
