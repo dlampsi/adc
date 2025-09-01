@@ -5,7 +5,7 @@ toolchain go1.24.1
 
 require (
 	github.com/go-ldap/ldap/v3 v3.4.10
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.0
 )
 
 require (
